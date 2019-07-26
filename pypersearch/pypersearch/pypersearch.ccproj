@@ -12,6 +12,7 @@
     <AssemblyName>pypersearch</AssemblyName>
     <StartDevelopmentStorage>True</StartDevelopmentStorage>
     <Name>pypersearch</Name>
+    <UseWebProjectPorts>False</UseWebProjectPorts>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
