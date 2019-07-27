@@ -9,17 +9,39 @@
             <p class="lead text-lg-center text-dark">Pyper Search is an open source search engine using Azure Cloud Service as a Platform.</p>
             <p>Start your search here...</p>
         </div>
-        <div class="d-flex justify-content-center">@Html.Partial("_MainSearchBar")</div>
+        <div class="d-flex justify-content-center">@Html.Partial("_HomeSearchBar")</div>
     </div>
 </div>
 
 @section scripts {
     <script>
         $("#home-tab").addClass("active");
+
         function showQuerySuggestions(str) {
-            if (str.length == 0) {
-                return 0;
+            if (str.length < 2) {
+                $("#query-suggestions").empty();
+                return;
             }
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    $("#query-suggestions").show();
+                    $("#query-suggestions").html(this.responseText);
+                }
+            }
+            var actionUrl = '@Url.Action("Autocomplete", "Search")' + '?query=' + str;
+            xmlhttp.open('GET', actionUrl, true);
+            xmlhttp.send();
         }
+
+        function changeSearchBoxValue(str) {
+            if (str.length == 0) {
+                return;
+            }
+            $("#search-box").val(str);
+            $('#query-suggestions').hide();
+            $('#search-box').focus();
+        }
+
     </script>
 }

@@ -1,0 +1,20 @@
+﻿@model IEnumerable<string>
+
+<div class="list-group p-2">
+    <ul>
+        @if (Model != null && Model.Any())
+        {
+            foreach (string suggestion in Model)
+            {
+                <li class="list-group-item flex-lg-grow-1 " onmouseover="this.className += ' text-primary'; this.style.cursor = 'pointer'" onmouseout="this.className = 'list-group-item'"
+                    onclick="changeSearchBoxValue('@suggestion')">
+                    @suggestion
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item">No Suggestions...</li>
+        }
+    </ul>
+</div>

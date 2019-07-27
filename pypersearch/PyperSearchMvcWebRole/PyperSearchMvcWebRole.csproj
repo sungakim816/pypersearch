@@ -154,6 +154,7 @@
     <Compile Include="App_Start\FilterConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="Controllers\SearchController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -239,7 +240,9 @@
     <Content Include="Scripts\popper-utils.js.map" />
     <Content Include="Views\Shared\_MainNavBar.cshtml" />
     <Content Include="Views\Shared\_Footer.cshtml" />
-    <Content Include="Views\Shared\_MainSearchBar.cshtml" />
+    <Content Include="Views\Shared\_HomeSearchBar.cshtml" />
+    <Content Include="Views\Search\Autocomplete.cshtml" />
+    <Content Include="Views\Search\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Models\" />

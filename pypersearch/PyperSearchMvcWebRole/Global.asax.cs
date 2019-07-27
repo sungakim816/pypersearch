@@ -24,7 +24,7 @@ namespace PyperSearchMvcWebRole
 
         private void InitializeTrie()
         {
-            Dictionary<string, short> suggestions = new Dictionary<string, short>();
+            Dictionary<string, ushort> suggestions = new Dictionary<string, ushort>();
             string filePath = Server.MapPath("~/App_Data/pagecount.csv");
             FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
             StreamReader streamReader = new StreamReader(fs, Encoding.UTF8);
@@ -33,13 +33,12 @@ namespace PyperSearchMvcWebRole
             {
                 string[] line_arr = line.Split(':');
                 string title = line_arr.FirstOrDefault();
-                short count = Convert.ToInt16(line.LastOrDefault());
+                ushort count = Convert.ToUInt16(line.LastOrDefault());
                 suggestions.Add(title, count);
             }
             fs.Close();
-            HttpRuntime.Cache.Insert("suggestions", suggestions, null,
-                Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null);
-            
+            HttpRuntime.Cache.Insert("trie", suggestions, null,
+                Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null);     
         }
     }
 }
