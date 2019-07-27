@@ -3,17 +3,70 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@ViewBag.Title - PyperSearch</title>
+    <title>@ViewBag.Title - Pyper Search</title>
     @Styles.Render("~/Content/css")
     @Scripts.Render("~/bundles/modernizr")
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
+    <style>
+        .searchbar {
+            margin-bottom: auto;
+            margin-top: auto;
+            height: 50px;
+            border-radius: 30px;
+            border-width: thin;
+            border-style: solid;
+            color: black;
+            background-color: white;
+            border-color: black;
+            padding: 4px;
+        }
+
+        .search_input {
+            color: black;
+            border: 0;
+            outline: 0;
+            background: none;
+            width: 800px;
+            max-width: 900px;
+            padding-top: 3px;
+            padding-right: 3px;
+            padding-bottom: 3px;
+            padding-left: 20px;
+            /*caret-color: transparent;*/
+            line-height: 34px;
+            /*caret-color: red;*/
+        }
+
+        .search_icon {
+            border: 0;
+            outline: 0;
+            height: 40px;
+            width: 40px;
+            float: right;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            color: white;
+        }
+
+        .search_icon:hover {
+            color: blue;
+        }
+
+        #query-suggestions {
+            z-index: 1000;
+            position: absolute;
+            width: 40rem;
+        }
+    </style>
 </head>
 <body>
-    @Html.Partial("_MainNavBar")
     <div class="container body-content">
+        @Html.Partial("_MainNavBar")
         @RenderBody()
-        @Html.Partial("_Footer")
     </div>
- 
+
 
     @Scripts.Render("~/bundles/jquery")
     @Scripts.Render("~/bundles/bootstrap")
