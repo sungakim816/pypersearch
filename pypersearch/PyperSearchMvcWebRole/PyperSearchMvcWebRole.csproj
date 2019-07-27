@@ -140,6 +140,9 @@
       <Private>True</Private>
       <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.7\lib\net45\System.Web.WebPages.Razor.dll</HintPath>
     </Reference>
+    <Reference Include="TrieNet, Version=1.0.3.26316, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TrieNet.1.0.3.26316\lib\net461\TrieNet.dll</HintPath>
+    </Reference>
     <Reference Include="WebGrease">
       <Private>True</Private>
       <HintPath>..\packages\WebGrease.1.6.0\lib\WebGrease.dll</HintPath>
