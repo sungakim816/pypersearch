@@ -26,6 +26,10 @@ namespace PyperSearchMvcWebRole.Controllers
             {
                 pageNumber = 1;
             }
+            // remove all 'stop words'
+            // split the query string 
+            // use linq to finally built the query
+            // return a result to the view
             ViewBag.Query = query;
 
             return View();

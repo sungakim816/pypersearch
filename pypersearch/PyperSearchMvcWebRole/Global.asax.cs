@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Microsoft.WindowsAzure.ServiceRuntime;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,10 +27,21 @@ namespace PyperSearchMvcWebRole
 
         private void InitializeTrie()
         {
+            // connect to a storage account
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("StorageConnectionString"));
+            // create a blob client
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            // access blob storage container
+            CloudBlobContainer pyperSearchContainer = blobClient.GetContainerReference("pypersearch");
+            // create if does not exists
+            pyperSearchContainer.CreateIfNotExistsAsync();
+            // access the actual file needed to be access
+            CloudBlockBlob pageCounts = pyperSearchContainer.GetBlockBlobReference("pagecount.csv");
+            
             Dictionary<string, ushort> suggestions = new Dictionary<string, ushort>();
-            string filePath = Server.MapPath("~/App_Data/pagecount.csv");
-            FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            StreamReader streamReader = new StreamReader(fs, Encoding.UTF8);
+            // string filePath = Server.MapPath("~/App_Data/pagecount.csv");
+            // FileStream fs = new FileStream(pageCounts.Uri.ToString(), FileMode.Open, FileAccess.Read);
+            StreamReader streamReader = new StreamReader(pageCounts.OpenRead());
             string line;
             while ((line = streamReader.ReadLine()) != null)
             {
@@ -36,9 +50,9 @@ namespace PyperSearchMvcWebRole
                 ushort count = Convert.ToUInt16(line.LastOrDefault());
                 suggestions.Add(title, count);
             }
-            fs.Close();
+            // fs.Close();
             HttpRuntime.Cache.Insert("trie", suggestions, null,
-                Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null);     
+                Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null);
         }
     }
 }
