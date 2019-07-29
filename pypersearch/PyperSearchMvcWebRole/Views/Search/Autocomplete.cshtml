@@ -1,20 +1,20 @@
 ﻿@model IEnumerable<string>
 
-<div class="list-group p-2">
+<div class="list-group p-2 text-dark">
     <ul>
         @if (Model != null && Model.Any())
         {
-            foreach (string suggestion in Model)
+            foreach (var suggestion in Model)
             {
-                <li class="list-group-item flex-lg-grow-1 " onmouseover="this.className += ' text-primary'; this.style.cursor = 'pointer'" onmouseout="this.className = 'list-group-item'"
+                <li class="list-group-item p-1" onmouseover="this.className += ' text-primary'; this.style.cursor = 'pointer'" onmouseout="this.className = 'list-group-item p-1'"
                     onclick="changeSearchBoxValue('@suggestion')">
-                    @suggestion
+                   <span class="small">@suggestion</span>
                 </li>
             }
         }
         else
         {
-            <li class="list-group-item">No Suggestions...</li>
+            <li class="list-group-item p-1">No Suggestions...</li>
         }
     </ul>
 </div>

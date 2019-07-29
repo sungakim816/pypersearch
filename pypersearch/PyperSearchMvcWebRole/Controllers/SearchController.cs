@@ -1,38 +1,48 @@
-﻿using System;
+﻿using PyperSearchMvcWebRole.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
+using Gma.DataStructures.StringSearch;
+using PagedList;
 
 namespace PyperSearchMvcWebRole.Controllers
 {
     public class SearchController : Controller
     {
         // GET: Search
-        private Dictionary<string, ushort> trie; 
+        PatriciaTrie<string> trie;
         public SearchController()
         {
-            trie = (Dictionary<string, ushort>)HttpRuntime.Cache.Get("trie");
+            trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie");
         }
 
         [HttpGet]
-        [OutputCache(Duration = 30, VaryByParam = "query")]
-        [Route("Search/Index")]
-        [Route("Search")]
+        [OutputCache(Duration = 30)]
+        [Route("Search/")]
+        [Route("Search/{query}")]
         [Route("Search/{query}/{pageNumber:regex(^[1-9]{0, 4}$)}")]
         public ActionResult Index(string query, int? pageNumber)
         {
+
+            int pageSize = 10; // items per pages
             if (!pageNumber.HasValue)
             {
                 pageNumber = 1;
             }
-            // remove all 'stop words'
-            // split the query string 
-            // use linq to finally built the query
-            // return a result to the view
             ViewBag.Query = query;
+            WikipediaSearchResults wikiPages = null;
+            if (!string.IsNullOrEmpty(query))
+            {
+                wikiPages = new WikipediaSearchResults(query);
+            }
+            if (wikiPages == null)
+            {
+                return View();
+            }
+            return View(wikiPages.RetrievePages().ToPagedList((int)pageNumber, pageSize));
 
-            return View();
         }
 
         [HttpGet]
@@ -46,11 +56,7 @@ namespace PyperSearchMvcWebRole.Controllers
                 return View(Enumerable.Empty<string>());
             }
             ViewBag.Query = query;
-            var suggestions = trie
-                .Where(node => node.Key.StartsWith(query, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(node => node.Value)
-                .Take(10)
-                .Select(node => node.Key);
+            var suggestions = trie.Retrieve(query.ToLower()).Take(10);
             return View(suggestions);
         }
     }

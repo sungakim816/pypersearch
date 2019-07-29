@@ -1,7 +1,97 @@
-﻿
+﻿@using PagedList.Mvc;
+@model PagedList.IPagedList<PyperSearchMvcWebRole.Models.WikipediaPage>
+
 @{
     ViewBag.Title = "Search";
 }
+@Html.Partial("_NavSearchBar")
+<div class="container-fluid bg-transparent">
+    @if (Model != null && Model.PageCount > 0)
+    {
+        <div class="list-group list-group-flush w-50 p-3 text-break">
+            @foreach (var page in Model)
+            {
+                <div class="list-group-item p-2" target="_blank">
+                    <a href="@page.Link" class="d-flex w-100 text-decoration-none" target="_blank">
+                        <span class="mb-1 text-info h5">@page.Title</span>
+                    </a>
+                    <p class="mb-1 text-justify text-dark">@page.Description</p>
+                </div>
 
-<h2>Search Result</h2>
+            }
+        </div>
+        <nav class="d-flex justify-content-lg-start w-50 p-2">
+            <ul class="pagination">
+                <li class="page-item  @(@Model.HasPreviousPage? "": "disabled")">
+                    <a class="page-link" href="@Url.Action("Index", new { query = ViewBag.Query, pageNumber = Model.PageNumber - 1 })"
+                       tabindex="-1" aria-disabled="@(@Model.HasPreviousPage? "false": "true")">
+                        Prev
+                    </a>
+                </li>
+                @for (var pageNumber = 1; pageNumber <= Model.PageCount; pageNumber++)
+                {
+                    <li class="page-item @(@Model.PageNumber == pageNumber? "active": "")">
+                        <a class="page-link" href="@Url.Action("Index", new { query = ViewBag.Query, pageNumber = pageNumber })">@pageNumber</a>
+                    </li>
+                }
+                <li class="page-item @(@Model.HasNextPage? "": "disabled")">
+                    <a class="page-link" href="@Url.Action("Index", new { query = ViewBag.Query, pageNumber = Model.PageNumber + 1 })"
+                       tabindex="-1" aria-disabled="@(@Model.HasNextPage? "false": "true")">
+                        Next
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    }
+    else if (Model != null && Model.PageCount == 0)
+    {
+        <br />
+        <div class="alert alert-info" role="alert">
+            <h4>Your search <strong>@ViewBag.Query</strong> did not match any documents.</h4>
+            <h5>Suggestions:</h5>
+            <ul>
+                <li> Make sure that all words are spelled correctly. </li>
+                <li>  Try different keywords. </li>
+                <li>Try more general keywords.</li>
+                <li> Try fewer keyword</li>
+            </ul>
+        </div>
+    }
+</div>
+
+
+
+@section scripts {
+    <script>
+        $("#home-tab").addClass("active");
+
+        function showQuerySuggestions(str) {
+            if (str.length == 0) {
+                $("#query-suggestions").empty();
+                return;
+            }
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    $("#query-suggestions").show();
+                    $("#query-suggestions").html(this.responseText);
+                }
+            }
+            var actionUrl = '@Url.Action("Autocomplete", "Search")' + '?query=' + str;
+            xmlhttp.open('GET', actionUrl, true);
+            xmlhttp.send();
+        }
+
+        function changeSearchBoxValue(str) {
+            if (str.length == 0) {
+                return;
+            }
+            $("#search-box").val(str);
+            $('#query-suggestions').hide();
+            $('#search-box').focus();
+        }
+
+    </script>
+}
+
 

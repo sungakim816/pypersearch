@@ -1,6 +1,7 @@
 ﻿using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using PyperSearchMvcWebRole.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +12,7 @@ using System.Web.Caching;
 using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
+using Gma.DataStructures.StringSearch;
 
 namespace PyperSearchMvcWebRole
 {
@@ -22,10 +24,10 @@ namespace PyperSearchMvcWebRole
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
-            InitializeTrie();
+            Initialize();
         }
 
-        private void InitializeTrie()
+        private void Initialize()
         {
             // connect to a storage account
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("StorageConnectionString"));
@@ -35,24 +37,47 @@ namespace PyperSearchMvcWebRole
             CloudBlobContainer pyperSearchContainer = blobClient.GetContainerReference("pypersearch");
             // create if does not exists
             pyperSearchContainer.CreateIfNotExistsAsync();
-            // access the actual file needed to be access
-            CloudBlockBlob pageCounts = pyperSearchContainer.GetBlockBlobReference("pagecount.csv");
-            
-            Dictionary<string, ushort> suggestions = new Dictionary<string, ushort>();
-            // string filePath = Server.MapPath("~/App_Data/pagecount.csv");
-            // FileStream fs = new FileStream(pageCounts.Uri.ToString(), FileMode.Open, FileAccess.Read);
-            StreamReader streamReader = new StreamReader(pageCounts.OpenRead());
+            // access the actual file needed to be access (pagecount.csv, stopwords.csv)
+            CloudBlockBlob pageCountsBlockBlob = pyperSearchContainer.GetBlockBlobReference("pagecount.csv");
+            CloudBlockBlob stopWordsBlockBlob = pyperSearchContainer.GetBlockBlobReference("stopwords.csv");
+            var trie = new PatriciaTrie<string>();
+            List<string> stopWords = new List<string>();
+            // create a stream reader for pageCountBlockBlob
+            StreamReader streamReader = new StreamReader(pageCountsBlockBlob.OpenRead());
             string line;
+            // save lines to trie
+
+            //while ((line = streamReader.ReadLine()) != null)
+            //{
+            //    string[] line_arr = line.Split(':');
+            //    string title = line_arr.FirstOrDefault();
+            //    try
+            //    {
+            //        trie.Add(title.ToLower(), title);
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        Console.WriteLine(ex.Message);
+            //        continue;
+            //    }
+
+            //}
+            // save trie to runtime cache
+            HttpRuntime.Cache.Insert("trie", trie, null,
+                Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null);
+            streamReader.Close();
+            // create a stream reader for stopWordsBlockBlob
+            streamReader = new StreamReader(stopWordsBlockBlob.OpenRead());
+            // add lines to stopWords
             while ((line = streamReader.ReadLine()) != null)
             {
-                string[] line_arr = line.Split(':');
-                string title = line_arr.FirstOrDefault();
-                ushort count = Convert.ToUInt16(line.LastOrDefault());
-                suggestions.Add(title, count);
+                stopWords.Add(line);
             }
-            // fs.Close();
-            HttpRuntime.Cache.Insert("trie", suggestions, null,
+            streamReader.Close();
+            // save stopWords list to runtime cache
+            HttpRuntime.Cache.Insert("stopwords", stopWords, null,
                 Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null);
         }
+
     }
 }

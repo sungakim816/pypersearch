@@ -2,6 +2,7 @@
     ViewBag.Title = "Home";
 }
 <div id="landing">
+    @Html.Partial("_MainNavBar")
     <br /><br /><br /><br /><br /><br />
     <div class="container">
         <div class="jumbotron text-center bg-transparent">
@@ -18,7 +19,7 @@
         $("#home-tab").addClass("active");
 
         function showQuerySuggestions(str) {
-            if (str.length < 2) {
+            if (str.length == 0) {
                 $("#query-suggestions").empty();
                 return;
             }
