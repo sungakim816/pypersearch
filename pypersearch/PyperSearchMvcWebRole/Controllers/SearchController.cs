@@ -1,28 +1,51 @@
 ﻿using PyperSearchMvcWebRole.Models;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using Gma.DataStructures.StringSearch;
 using PagedList;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.WindowsAzure.ServiceRuntime;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace PyperSearchMvcWebRole.Controllers
 {
     public class SearchController : Controller
     {
         // GET: Search
-        PatriciaTrie<string> trie;
-        readonly char[] disallowedCharacters;
-        List<string> stopwords;
+        private PatriciaTrie<string> trie;
+        private readonly char[] disallowedCharacters;
+        private readonly List<string> stopwords;
+        private readonly CloudStorageAccount storageAccount;
+        private readonly CloudTableClient tableClient;
+
+        private readonly CloudTable websitePageMasterTable;
+        private readonly CloudTable domainTable;
+
+
         public SearchController()
         {
+            storageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("StorageConnectionString"));
+            tableClient = storageAccount.CreateCloudTableClient();
+            domainTable = tableClient.GetTableReference("DomainTable");
+            websitePageMasterTable = tableClient.GetTableReference("WebsitePageMasterTable");
+
+            domainTable.CreateIfNotExistsAsync(); // create if not exists
+            websitePageMasterTable.CreateIfNotExistsAsync(); // create if not exists
+
             trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie");
             disallowedCharacters = new[] { '?', ',', ':', ';', '!', '&', '(', ')', '"' };
             stopwords = (List<string>)HttpRuntime.Cache["stopwords"];
         }
 
+        /// <summary>
+        /// Method to generate valid keywords from a 'query'
+        /// </summary>
+        /// <param name="query">string</param>
+        /// <returns>List<string></returns>
         private List<string> GetValidKeywords(string query)
         {
             if (string.IsNullOrEmpty(query) || string.IsNullOrWhiteSpace(query))
@@ -57,7 +80,7 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/")]
         [Route("Search/{query}")]
         [Route("Search/{query}/{pageNumber:regex(^[1-9]{0, 4}$)}")]
-        public ActionResult Index(string query, int? pageNumber)
+        public async Task<ActionResult> Index(string query, int? pageNumber)
         {
             int pageSize = 10; // items per pages
             if (!pageNumber.HasValue)
@@ -66,23 +89,52 @@ namespace PyperSearchMvcWebRole.Controllers
             }
             ViewBag.Query = query;
             List<string> keywords = GetValidKeywords(query);
-
-
-
-
-
-
-            WikipediaSearchResults wikiPages = null;
-            if (!string.IsNullOrEmpty(query))
+            // get all domain names
+            var domainNames = domainTable.ExecuteQuery(
+                    new TableQuery<DynamicTableEntity>()
+                    .Select(new List<string> { "PartitionKey" })
+                ).Select(x => x.PartitionKey);
+            List<CloudTable> domainTableList = new List<CloudTable>(); // empty list for all possible tables
+            // create table from retrieve domain names
+            foreach (string name in domainNames)
             {
-                wikiPages = new WikipediaSearchResults(query);
+                CloudTable table = tableClient.GetTableReference(name);
+                bool? exists = await table.ExistsAsync();
+                if (exists != null && exists.Value == true)
+                {
+                    domainTableList.Add(table);
+                }
             }
-            if (wikiPages == null)
+            ViewBag.Keywords = keywords;
+            IEnumerable<WebsitePage> partialResults = Enumerable.Empty<WebsitePage>();
+            foreach (CloudTable table in domainTableList) // now retrieve pages from those tables using the keywords
             {
-                return View();
+                foreach (string keyword in keywords)
+                {
+                    string keywordEncoded = HttpUtility.UrlEncode(keyword);
+                    var resultsUsingKeyword = table.ExecuteQuery(
+                        new TableQuery<WebsitePage>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keywordEncoded))
+                        .Select(new List<string> { "RowKey", "Domain" })
+                        );
+                    partialResults = partialResults.Concat(resultsUsingKeyword);
+                }
             }
-            return View(wikiPages.RetrievePages().ToPagedList((int)pageNumber, pageSize));
-
+            // order by row key frequency (based on keywords)
+            partialResults = partialResults.GroupBy(r => r.RowKey).OrderByDescending(r => r.Count())
+                .SelectMany(r => r)
+                .GroupBy(r => r.RowKey)
+                .Select(r => r.First());
+            List<WebsitePage> finalResult = new List<WebsitePage>(); // final query result
+            foreach (var page in partialResults)
+            {
+                TableOperation single = TableOperation.Retrieve<WebsitePage>(page.Domain, page.RowKey);
+                var result = await websitePageMasterTable.ExecuteAsync(single);
+                if (result.Result != null)
+                {
+                    finalResult.Add((WebsitePage)result.Result);
+                }
+            }
+            return View(finalResult.ToPagedList((int)pageNumber, pageSize));
         }
 
         [HttpGet]

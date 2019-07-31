@@ -3,7 +3,6 @@
   <Role name="PyperSearchMvcWebRole">
     <Instances count="1" />
     <ConfigurationSettings>
-      <Setting name="Microsoft.WindowsAzure.Plugins.Diagnostics.ConnectionString" value="DefaultEndpointsProtocol=https;AccountName=webnetcrawlerstorage;AccountKey=tqKmNF2MS1FnDj+ZDCtFZER/3gwmV5nuYLyTuWSfOhQKl2LeIfnjdB4rg93BhH7rJ4+x0wKB2UutLSKkyaaYcg==;EndpointSuffix=core.windows.net" />
       <Setting name="StorageConnectionString" value="DefaultEndpointsProtocol=https;AccountName=webnetcrawlerstorage;AccountKey=tqKmNF2MS1FnDj+ZDCtFZER/3gwmV5nuYLyTuWSfOhQKl2LeIfnjdB4rg93BhH7rJ4+x0wKB2UutLSKkyaaYcg==;EndpointSuffix=core.windows.net" />
     </ConfigurationSettings>
   </Role>
