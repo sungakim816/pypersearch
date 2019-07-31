@@ -76,7 +76,7 @@ namespace PyperSearchMvcWebRole.Controllers
         }
 
         [HttpGet]
-        [OutputCache(Duration = 30)]
+        [OutputCache(Duration = 60, VaryByParam = "*")]
         [Route("Search/")]
         [Route("Search/{query}")]
         [Route("Search/{query}/{pageNumber:regex(^[1-9]{0, 4}$)}")]
@@ -93,9 +93,9 @@ namespace PyperSearchMvcWebRole.Controllers
             var domainNames = domainTable.ExecuteQuery(
                     new TableQuery<DynamicTableEntity>()
                     .Select(new List<string> { "PartitionKey" })
-                ).Select(x => x.PartitionKey);
+                ).Select(x => x.PartitionKey); // select only partition key for lower foot print
             List<CloudTable> domainTableList = new List<CloudTable>(); // empty list for all possible tables
-            // create table from retrieve domain names
+            // create tables using retrieve domain names
             foreach (string name in domainNames)
             {
                 CloudTable table = tableClient.GetTableReference(name);
@@ -106,25 +106,33 @@ namespace PyperSearchMvcWebRole.Controllers
                 }
             }
             ViewBag.Keywords = keywords;
-            IEnumerable<WebsitePage> partialResults = Enumerable.Empty<WebsitePage>();
+            List<WebsitePage> partialResults = new List<WebsitePage>();
             foreach (CloudTable table in domainTableList) // now retrieve pages from those tables using the keywords
             {
                 foreach (string keyword in keywords)
                 {
                     string keywordEncoded = HttpUtility.UrlEncode(keyword);
-                    var resultsUsingKeyword = table.ExecuteQuery(
-                        new TableQuery<WebsitePage>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keywordEncoded))
-                        .Select(new List<string> { "RowKey", "Domain" })
-                        );
-                    partialResults = partialResults.Concat(resultsUsingKeyword);
+                    TableQuery<WebsitePage> q = new TableQuery<WebsitePage>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keywordEncoded))
+                         .Select(new List<string> { "RowKey", "Domain" });
+                    TableContinuationToken continuationToken = null;
+                    do
+                    {
+                        TableQuerySegment<WebsitePage> segmentResult = await table.ExecuteQuerySegmentedAsync(q, continuationToken);
+                        continuationToken = segmentResult.ContinuationToken;
+                        partialResults.AddRange(segmentResult);
+                    } while (continuationToken != null);
                 }
             }
-            // order by row key frequency (based on keywords)
-            partialResults = partialResults.GroupBy(r => r.RowKey).OrderByDescending(r => r.Count())
+            // ranking based on keyword matches (keyword = rowKey)
+            partialResults = partialResults
+                .GroupBy(r => r.RowKey)
+                .OrderByDescending(r => r.Count())
                 .SelectMany(r => r)
                 .GroupBy(r => r.RowKey)
-                .Select(r => r.First());
-            List<WebsitePage> finalResult = new List<WebsitePage>(); // final query result
+                .Select(r => r.First())
+                .ToList();
+
+            List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
             foreach (var page in partialResults)
             {
                 TableOperation single = TableOperation.Retrieve<WebsitePage>(page.Domain, page.RowKey);
@@ -134,6 +142,7 @@ namespace PyperSearchMvcWebRole.Controllers
                     finalResult.Add((WebsitePage)result.Result);
                 }
             }
+            finalResult = finalResult.OrderByDescending(x => x.Clicks).ToList();
             return View(finalResult.ToPagedList((int)pageNumber, pageSize));
         }
 
@@ -151,5 +160,24 @@ namespace PyperSearchMvcWebRole.Controllers
             var suggestions = trie.Retrieve(query.ToLower()).Take(10);
             return View(suggestions);
         }
+
+        [HttpGet]
+        [Route("Search/IncrementClickRank")]
+        [Route("Search/Increment/Click/{partitionkey}/{rowkey}")]
+        public async Task<ActionResult> IncrementClickRank(string partitionkey, string rowkey)
+        {
+            TableOperation single = TableOperation.Retrieve<WebsitePage>(partitionkey, rowkey);
+            var page = await websitePageMasterTable.ExecuteAsync(single);
+            if (page == null)
+            {
+                return new EmptyResult();
+            }
+            var result = page.Result as WebsitePage;
+            result.Clicks += 1;
+            TableOperation update = TableOperation.Merge(result);
+            await websitePageMasterTable.ExecuteAsync(update);
+            return new EmptyResult();
+        }
+
     }
 }

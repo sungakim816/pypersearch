@@ -12,14 +12,12 @@
         <div class="list-group list-group-flush w-50 p-3 text-break">
             @foreach (var page in Model)
             {
-
                 <div class="list-group-item p-2" target="_blank">
-
-                    <a href="@page.Url" class="d-flex w-100 text-decoration-none" target="_blank">
+                    <a href="@page.Url" class="d-flex w-100 text-decoration-none" target="_blank" onclick="incrementClicks('@page.PartitionKey', '@page.RowKey')">
                         <span class="mb-1 text-primary h5">@page.Title &nbsp;|&nbsp;@page.Domain</span>
                     </a>
                     <small class="mb-1 text-justify font-weight-normal">
-                        <a href="@page.Url" target="_blank" class="text-decoration-none text-info">@page.Url</a>
+                        <a href="@page.Url" target="_blank" class="text-decoration-none text-info" onclick="incrementClicks('@page.PartitionKey', '@page.RowKey')">@page.Url</a>
                     </small>
                     <small class="font-italic">@page.PublishDate</small>
                     @{ string snippet = string.Join(" ", page.Content.Split(' ').Take(100));
@@ -30,7 +28,6 @@
                         {<span>@page.PublishDate - </span>}
                         @Html.Raw(WebUtility.HtmlDecode(snippet)).....
                     </p>
-
                 </div>
             }
         </div>
@@ -73,8 +70,6 @@
     }
 </div>
 
-
-
 @section scripts {
     <script>
         $("#home-tab").addClass("active");
@@ -103,6 +98,13 @@
             $("#search-box").val(str);
             $('#query-suggestions').hide();
             $('#search-box').focus();
+        }
+
+        function incrementClicks(partitionKey, rowKey) {
+            var xmlhttp = new XMLHttpRequest();
+            var actionUrl = "@Url.Action("IncrementClickRank", "Search")" + "?partitionkey=" + partitionKey + "&rowkey=" +rowKey;
+            xmlhttp.open("GET", actionUrl, true);
+            xmlhttp.send();
         }
 
     </script>
