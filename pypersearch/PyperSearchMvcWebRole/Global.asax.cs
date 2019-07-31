@@ -38,7 +38,7 @@ namespace PyperSearchMvcWebRole
             // create if does not exists
             pyperSearchContainer.CreateIfNotExistsAsync();
             // access the actual file needed to be access (pagecount.csv, stopwords.csv)
-            CloudBlockBlob pageCountsBlockBlob = pyperSearchContainer.GetBlockBlobReference("pagecount.csv");
+            CloudBlockBlob pageCountsBlockBlob = pyperSearchContainer.GetBlockBlobReference("pagecounts.csv");
             CloudBlockBlob stopWordsBlockBlob = pyperSearchContainer.GetBlockBlobReference("stopwords.csv");
             var trie = new PatriciaTrie<string>();
             List<string> stopWords = new List<string>();
