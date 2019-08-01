@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Net;
 using System.Web.Mvc;
 using Gma.DataStructures.StringSearch;
 using PagedList;
@@ -10,6 +11,8 @@ using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.WindowsAzure.ServiceRuntime;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using System;
 
 namespace PyperSearchMvcWebRole.Controllers
 {
@@ -75,6 +78,20 @@ namespace PyperSearchMvcWebRole.Controllers
             return filteredKeywords;
         }
 
+        private NbaStatistics GetNbaPlayerStats(string firstName, string lastName)
+        {
+            WebClient client = new WebClient();
+            string url = string.Format("http://ec2-54-254-229-239.ap-southeast-1.compute.amazonaws.com/api/player/{0}/{1}", firstName, lastName);
+            var result = client.DownloadString(url);
+            Trace.TraceInformation(result);
+            if (string.IsNullOrEmpty(result) || string.IsNullOrWhiteSpace(result))
+            {
+                return null;
+            }
+            var playerJson = JsonConvert.DeserializeObject<NbaStatistics>(result);
+            return playerJson;
+        }
+
         [HttpGet]
         [OutputCache(Duration = 60, VaryByParam = "*")]
         [Route("Search/")]
@@ -82,19 +99,34 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/{query}/{pageNumber:regex(^[1-9]{0, 4}$)}")]
         public async Task<ActionResult> Index(string query, int? pageNumber)
         {
-            int pageSize = 10; // items per pages
-            if (!pageNumber.HasValue)
+            if (string.IsNullOrEmpty(query))
             {
-                pageNumber = 1;
+                return View(Enumerable.Empty<WebsitePage>().ToPagedList(1, 1));
             }
+            int pageSize = 10; // items per pages
+            pageNumber = !pageNumber.HasValue ? 1 : pageNumber;
             ViewBag.Query = query;
             List<string> keywords = GetValidKeywords(query);
-            // get all domain names
+            if (!keywords.Any()) // check if empty
+            {
+                keywords = query.ToLower().Split(' ').ToList(); // use query as is.
+            }
+
+            NbaStatistics nbaPlayer = new NbaStatistics();
+            try
+            {
+                nbaPlayer = GetNbaPlayerStats(query.Split(' ').First(), query.Split(' ')[1]);
+                ViewBag.NbaPlayer = nbaPlayer;
+            }
+            catch (Exception)
+            { }
+             
+            // get all indexed domain names
             var domainNames = domainTable.ExecuteQuery(
                     new TableQuery<DynamicTableEntity>()
                     .Select(new List<string> { "PartitionKey" })
-                ).Select(x => x.PartitionKey); // select only partition key for lower foot print
-            List<CloudTable> domainTableList = new List<CloudTable>(); // empty list for all possible tables
+                ).Select(x => x.PartitionKey); // select only partition key for better performance
+            List<CloudTable> domainTableList = new List<CloudTable>(); // create list for all possible cloud tables
             // create tables using retrieve domain names
             foreach (string name in domainNames)
             {
@@ -105,19 +137,21 @@ namespace PyperSearchMvcWebRole.Controllers
                     domainTableList.Add(table);
                 }
             }
-            ViewBag.Keywords = keywords;
+            ViewBag.Keywords = keywords; // store keyword for body snippet highligthing 
             List<WebsitePage> partialResults = new List<WebsitePage>();
             foreach (CloudTable table in domainTableList) // now retrieve pages from those tables using the keywords
             {
                 foreach (string keyword in keywords)
                 {
                     string keywordEncoded = HttpUtility.UrlEncode(keyword);
-                    TableQuery<WebsitePage> q = new TableQuery<WebsitePage>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keywordEncoded))
+                    TableQuery<WebsitePage> q = new TableQuery<WebsitePage>()
+                        .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keywordEncoded))
                          .Select(new List<string> { "RowKey", "Domain" });
                     TableContinuationToken continuationToken = null;
                     do
                     {
-                        TableQuerySegment<WebsitePage> segmentResult = await table.ExecuteQuerySegmentedAsync(q, continuationToken);
+                        TableQuerySegment<WebsitePage> segmentResult = await table
+                            .ExecuteQuerySegmentedAsync(q, continuationToken);
                         continuationToken = segmentResult.ContinuationToken;
                         partialResults.AddRange(segmentResult);
                     } while (continuationToken != null);

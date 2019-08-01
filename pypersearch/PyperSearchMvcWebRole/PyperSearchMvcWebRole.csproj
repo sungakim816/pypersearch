@@ -203,6 +203,7 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\NbaStatistics.cs" />
     <Compile Include="Models\Trie.cs" />
     <Compile Include="Models\TrieNode.cs" />
     <Compile Include="Models\WebsitePage.cs" />

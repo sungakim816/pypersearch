@@ -6,10 +6,11 @@
     ViewBag.Title = "Search";
 }
 @Html.Partial("_NavSearchBar")
-<div class="container-fluid bg-transparent">
-    @if (Model != null && Model.PageCount > 0)
+
+<div class="row container-fluid bg-transparent">
+    @if ((Model != null && Model.PageCount > 0))
     {
-        <div class="list-group list-group-flush w-50 p-3 text-break">
+        <div class="list-group list-group-flush w-50 p-3 text-break col">
             @foreach (var page in Model)
             {
                 <div class="list-group-item p-2" target="_blank">
@@ -19,55 +20,67 @@
                     <small class="mb-1 text-justify font-weight-normal">
                         <a href="@page.Url" target="_blank" class="text-decoration-none text-info" onclick="incrementClicks('@page.PartitionKey', '@page.RowKey')">@page.Url</a>
                     </small>
-                    <small class="font-italic">@page.PublishDate</small>
-                    @{ string snippet = string.Join(" ", page.Content.Split(' ').Take(100));
+                    @{ string snippet = string.Join(" ", page.Content.Split(' ').Take(255));
                         ((List<string>)ViewBag.Keywords).ForEach(x => snippet = Regex.Replace(snippet, x, @"<strong>$0</strong>", RegexOptions.IgnoreCase));
                     }
                     <p class="justify-content-around text-black-50 small p-1">
                         @if (page.PublishDate != null)
-                        {<span>@page.PublishDate - </span>}
+                        {<span class="font-weight-bold">@page.PublishDate - </span>}
                         @Html.Raw(WebUtility.HtmlDecode(snippet)).....
                     </p>
                 </div>
             }
-        </div>
-        <nav class="d-flex justify-content-lg-start w-50 p-2">
-            <ul class="pagination">
-                <li class="page-item  @(@Model.HasPreviousPage? "": "disabled")">
-                    <a class="page-link" href="@Url.Action("Index", new { query = ViewBag.Query, pageNumber = Model.PageNumber - 1 })"
-                       tabindex="-1" aria-disabled="@(@Model.HasPreviousPage? "false": "true")">
-                        Prev
-                    </a>
-                </li>
-                @for (var pageNumber = 1; pageNumber <= Model.PageCount; pageNumber++)
-                {
-                    <li class="page-item @(@Model.PageNumber == pageNumber? "active": "")">
-                        <a class="page-link" href="@Url.Action("Index", new { query = ViewBag.Query, pageNumber = pageNumber })">@pageNumber</a>
+            <nav class="d-flex justify-content-lg-start w-50 p-2">
+                <ul class="pagination pagination-sm">
+                    <li class="page-item  @(@Model.HasPreviousPage? "": "disabled")">
+                        <a class="page-link" href="@Url.Action("Index", new { query = ViewBag.Query, pageNumber = Model.PageNumber - 1 })"
+                           tabindex="-1" aria-disabled="@(@Model.HasPreviousPage? "false": "true")">
+                            Prev
+                        </a>
                     </li>
-                }
-                <li class="page-item @(@Model.HasNextPage? "": "disabled")">
-                    <a class="page-link" href="@Url.Action("Index", new { query = ViewBag.Query, pageNumber = Model.PageNumber + 1 })"
-                       tabindex="-1" aria-disabled="@(@Model.HasNextPage? "false": "true")">
-                        Next
-                    </a>
-                </li>
-            </ul>
-        </nav>
-    }
-    else if (Model != null && Model.PageCount == 0)
-    {
-        <br />
-        <div class="alert alert-info" role="alert">
-            <h4>Your search <strong>@ViewBag.Query</strong> did not match any documents.</h4>
-            <h5>Suggestions:</h5>
-            <ul>
-                <li> Make sure that all words are spelled correctly. </li>
-                <li>  Try different keywords. </li>
-                <li>Try more general keywords.</li>
-                <li> Try fewer keyword</li>
-            </ul>
+                    @for (var pageNumber = 1; pageNumber <= Model.PageCount; pageNumber++)
+                    {
+                        <li class="page-item @(@Model.PageNumber == pageNumber? "active": "")">
+                            <a class="page-link" href="@(Model.PageNumber == pageNumber? "#": @Url.Action("Index", new { query = ViewBag.Query, pageNumber = pageNumber }))">
+                                @pageNumber
+                            </a>
+                        </li>
+                    }
+                    <li class="page-item @(@Model.HasNextPage? "": "disabled")">
+                        <a class="page-link" href="@Url.Action("Index", new { query = ViewBag.Query, pageNumber = Model.PageNumber + 1 })"
+                           tabindex="-1" aria-disabled="@(@Model.HasNextPage? "false": "true")">
+                            Next
+                        </a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     }
+    else if (Model != null && Model.PageCount == 0 && ViewBag.NbaPlayer == null)
+    {
+        <div class="alert alert-info list-group list-group-flush text-break col m-4 w-75" role="alert">
+            <div class="p-5">
+                <p class="h4 p-2">Your search <strong>@ViewBag.Query</strong> did not match any documents.</p>
+                <p class="h5 p-2">Suggestions:</p>
+                <ul>
+                    <li> Make sure that all words are spelled correctly. </li>
+                    <li>  Try different keywords. </li>
+                    <li>Try more general keywords.</li>
+                    <li> Try fewer keyword</li>
+                </ul>
+            </div>
+        </div>
+    }
+    <div class="col">
+        @if (ViewBag.NbaPlayer != null)
+        {
+
+            <div class="embed-responsive embed-responsive-1by1">
+                <iframe class="embed-responsive-item" src="@ViewBag.NbaPlayer.Framelink"></iframe>
+            </div>
+
+        }
+    </div>
 </div>
 
 @section scripts {
