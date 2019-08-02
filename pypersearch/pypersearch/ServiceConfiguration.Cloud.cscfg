@@ -4,6 +4,14 @@
     <Instances count="1" />
     <ConfigurationSettings>
       <Setting name="StorageConnectionString" value="DefaultEndpointsProtocol=https;AccountName=webnetcrawlerstorage;AccountKey=tqKmNF2MS1FnDj+ZDCtFZER/3gwmV5nuYLyTuWSfOhQKl2LeIfnjdB4rg93BhH7rJ4+x0wKB2UutLSKkyaaYcg==;EndpointSuffix=core.windows.net" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.Enabled" value="true" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountUsername" value="kimsungakooapps" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountEncryptedPassword" value="MIIBpQYJKoZIhvcNAQcDoIIBljCCAZICAQAxggFOMIIBSgIBADAyMB4xHDAaBgNVBAMME1dpbmRvd3MgQXp1cmUgVG9vbHMCEBIADM1TRtS3RiAQhCzqdyEwDQYJKoZIhvcNAQEBBQAEggEAYGt6Qt0ARjdWgs7eCNDW2J1UGIAo8+1cXHpxtusu3a2tZKbv0+xxnzDoTdq1XZvUGlOl9NLHMXj6dI/kjQ3JPd2j0ejuUY9FfjOEC37YO0RKX8X/I4MOyEqvoWgYRhPX9ydPXATY9j4hxAkQUtEi+2OQV67w51z7aae3Oi7aLLhAdDaCOMNx9+E3g7NwFzPx3a1TZ71HyauiGKhH0JIyAmVcNUe+ZwiwR4NxSV+MpyoAlm/hQ8d/yVJt4r2ejjKMQVNHhbFptvOqWxAzDjHWujybvoATiDl0koIOHf/ZjJyinqUmuhqYlDmNohYpgnADcGZSIQY01kpBbr9p+sfMtjA7BgkqhkiG9w0BBwEwFAYIKoZIhvcNAwcECNBDZnDiixKhgBgh+5Yc/Sw2Iahs60fKvRm9zmNgSD3CYHs=" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteAccess.AccountExpiration" value="2020-08-02T23:59:59.0000000+08:00" />
+      <Setting name="Microsoft.WindowsAzure.Plugins.RemoteForwarder.Enabled" value="true" />
     </ConfigurationSettings>
+    <Certificates>
+      <Certificate name="Microsoft.WindowsAzure.Plugins.RemoteAccess.PasswordEncryption" thumbprint="9100439D73DE8D74E7E43FB6E0185D780A16CABE" thumbprintAlgorithm="sha1" />
+    </Certificates>
   </Role>
 </ServiceConfiguration>
