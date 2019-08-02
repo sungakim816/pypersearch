@@ -6,11 +6,10 @@
     ViewBag.Title = "Search";
 }
 @Html.Partial("_NavSearchBar")
-
-<div class="row container-fluid bg-transparent">
+<div class="row container-fluid bg-transparent p-lg-4">
     @if ((Model != null && Model.PageCount > 0))
     {
-        <div class="list-group list-group-flush w-50 p-3 text-break col">
+        <div class="list-group list-group-flush w-50 text-break col">
             @foreach (var page in Model)
             {
                 <div class="list-group-item p-2" target="_blank">
@@ -25,10 +24,10 @@
                     }
                     <p class="text-black-50 small p-1">
                         @if (page.PublishDate != null)
-                        {<span class="font-weight-bold">@page.PublishDate - </span>}                   
-                    <span class="justify-content-sm-end">
-                        @Html.Raw(WebUtility.HtmlDecode(snippet)).....
-                    </span>
+                        {<span class="font-weight-bold">@page.PublishDate - </span>}
+                        <span class="justify-content-sm-end">
+                            @Html.Raw(WebUtility.HtmlDecode(snippet)).....
+                        </span>
                     </p>
                 </div>
             }
@@ -82,7 +81,6 @@
         }
     </div>
 </div>
-
 @section scripts {
     <script>
         $("#home-tab").addClass("active");
