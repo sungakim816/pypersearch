@@ -1,5 +1,5 @@
 ﻿<div class="text-dark">
-    <form method="get" action="@Url.Action("Index", "Search")">
+    <form method="get" action="@Url.Action("Index", "Search")" onsubmit='updateQuerySuggestions($("#search-box").val())'>
         <div class="w-100">
             <div class="searchbar text-black-50">
                 <input id="search-box" class="search_input" type="text" name="query" maxlength="240" onkeyup="showQuerySuggestions(this.value)" placeholder="Search Keywords e.g Hello" value="@ViewBag.query" autocomplete="off" required>

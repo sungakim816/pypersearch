@@ -2,21 +2,32 @@
     ViewBag.Title = "Home";
 }
 <div id="landing">
-    @Html.Partial("_MainNavBar")
     <br /><br /><br /><br /><br /><br />
     <div class="container">
         <div class="jumbotron text-center bg-transparent">
-            <h1>Pyper Search</h1>
-            <p class="lead text-lg-center text-dark">Pyper Search is an open source search engine using Azure Cloud Service as a Platform.</p>
-            <p>Start your search here...</p>
+            <span class="h1">Pyper Search</span>
+            <div class="lead text-lg-center text-dark h3 m-4">
+                <p class="font-weight-normal">Pyper Search is an open source search engine using Azure Cloud Service as a Platform.</p> 
+                <p class="font-weight-light">Start your search here...</p>
+            </div>
         </div>
         <div class="d-flex justify-content-center">@Html.Partial("_HomeSearchBar")</div>
     </div>
+    @Html.Partial("_Footer")
 </div>
 
 @section scripts {
     <script>
         $("#home-tab").addClass("active");
+
+        function updateQuerySuggestions(query) {
+            if (query.length == 0) {
+                return;
+            }
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("GET", '@Url.Action("UpdateQuerySuggestions", "Search")' + '?query=' + query);
+            xmlhttp.send();
+        }
 
         function showQuerySuggestions(str) {
             if (str.length == 0) {

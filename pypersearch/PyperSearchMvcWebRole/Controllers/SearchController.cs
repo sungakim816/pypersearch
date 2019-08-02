@@ -19,7 +19,7 @@ namespace PyperSearchMvcWebRole.Controllers
     public class SearchController : Controller
     {
         // GET: Search
-        private PatriciaTrie<string> trie;
+        private readonly PatriciaTrie<string> trie;
         private readonly char[] disallowedCharacters;
         private readonly List<string> stopwords;
         private readonly CloudStorageAccount storageAccount;
@@ -103,32 +103,28 @@ namespace PyperSearchMvcWebRole.Controllers
             {
                 return View(Enumerable.Empty<WebsitePage>().ToPagedList(1, 1));
             }
-            int pageSize = 10; // items per pages
-            pageNumber = !pageNumber.HasValue ? 1 : pageNumber;
+            int pageSize = 15; // items per pages
+            pageNumber = !pageNumber.HasValue ? 1 : pageNumber; // page number
             ViewBag.Query = query;
-            List<string> keywords = GetValidKeywords(query);
-            if (!keywords.Any()) // check if empty
-            {
-                keywords = query.ToLower().Split(' ').ToList(); // use query as is.
-            }
-
-            NbaStatistics nbaPlayer = new NbaStatistics();
+            var queryList = query.ToLower().Split(' '); // create an array/list from the words found in the query
+            List<string> keywords = GetValidKeywords(query); // get valid keywords
             try
             {
-                nbaPlayer = GetNbaPlayerStats(query.Split(' ').First(), query.Split(' ')[1]);
-                ViewBag.NbaPlayer = nbaPlayer;
+                ViewBag.NbaPlayer = GetNbaPlayerStats(queryList.First(), queryList[1]); // try to get nba player stats
             }
             catch (Exception)
             { }
-             
-            // get all indexed domain names
-            var domainNames = domainTable.ExecuteQuery(
+            if (!keywords.Any()) // check if empty
+            {
+                keywords = query.ToLower().Split(' ').ToList(); // use the query as is.
+            }
+            ViewBag.Keywords = keywords; // store query for body snippet highligthing 
+            var domainNames = domainTable.ExecuteQuery(  // get all indexed domain names
                     new TableQuery<DynamicTableEntity>()
                     .Select(new List<string> { "PartitionKey" })
                 ).Select(x => x.PartitionKey); // select only partition key for better performance
             List<CloudTable> domainTableList = new List<CloudTable>(); // create list for all possible cloud tables
-            // create tables using retrieve domain names
-            foreach (string name in domainNames)
+            foreach (string name in domainNames)  // create tables using retrieve domain names
             {
                 CloudTable table = tableClient.GetTableReference(name);
                 bool? exists = await table.ExistsAsync();
@@ -137,9 +133,8 @@ namespace PyperSearchMvcWebRole.Controllers
                     domainTableList.Add(table);
                 }
             }
-            ViewBag.Keywords = keywords; // store keyword for body snippet highligthing 
             List<WebsitePage> partialResults = new List<WebsitePage>();
-            foreach (CloudTable table in domainTableList) // now retrieve pages from those tables using the keywords
+            foreach (CloudTable table in domainTableList) // retrieve pages from those tables using keyword as partition key
             {
                 foreach (string keyword in keywords)
                 {
@@ -157,15 +152,13 @@ namespace PyperSearchMvcWebRole.Controllers
                     } while (continuationToken != null);
                 }
             }
-            // ranking based on keyword matches (keyword = rowKey)
-            partialResults = partialResults
-                .GroupBy(r => r.RowKey)
-                .OrderByDescending(r => r.Count())
-                .SelectMany(r => r)
-                .GroupBy(r => r.RowKey)
-                .Select(r => r.First())
+            partialResults = partialResults // ranking based on keyword matches (keyword = rowKey)
+                .GroupBy(r => r.RowKey) // group by row key
+                .OrderByDescending(r => r.Count()) // count occurances 
+                .SelectMany(r => r) // select all
+                .GroupBy(r => r.RowKey) // group again
+                .Select(r => r.First()).Take(50) // select distinct value and limit result to 100
                 .ToList();
-
             List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
             foreach (var page in partialResults)
             {
@@ -181,7 +174,6 @@ namespace PyperSearchMvcWebRole.Controllers
         }
 
         [HttpGet]
-        [OutputCache(Duration = 30, VaryByParam = "query")]
         [Route("Search/Autocomplete")]
         [Route("Search/Autocomplete/{query}")]
         public ActionResult Autocomplete(string query)
@@ -213,5 +205,17 @@ namespace PyperSearchMvcWebRole.Controllers
             return new EmptyResult();
         }
 
+        [HttpGet]
+        [Route("Search/UpdateQuerySuggestions")]
+        [Route("Search/Update/Suggestions/{query}")]
+        public ActionResult UpdateQuerySuggestions(string query)
+        {
+            if (!trie.Retrieve(query.ToLower()).Any())
+            {
+                trie.Add(query.ToLower(), query);
+                HttpRuntime.Cache["trie"] = trie;
+            }
+            return new EmptyResult();
+        }
     }
 }

@@ -1,9 +1,8 @@
 ﻿@{
     Layout = null;
 }
-
 <div class="row">
-    <form method="get" action='@Url.Action("Index", "Search")'>
+    <form method="get" action='@Url.Action("Index", "Search")' onsubmit='updateQuerySuggestions($("#search-box").val())'>
         <div class="w-100">
             <div class="w-100">
                 <div class="searchbar text-black">

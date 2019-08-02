@@ -42,41 +42,33 @@ namespace PyperSearchMvcWebRole
             CloudBlockBlob stopWordsBlockBlob = pyperSearchContainer.GetBlockBlobReference("stopwords.csv");
             var trie = new PatriciaTrie<string>();
             List<string> stopWords = new List<string>();
-            // create a stream reader for pageCountBlockBlob
-            StreamReader streamReader = new StreamReader(pageCountsBlockBlob.OpenRead());
+            StreamReader streamReader = new StreamReader(pageCountsBlockBlob.OpenRead());  // create a stream reader for pageCountBlockBlob
             string line;
-            // save lines to trie
-
-            //while ((line = streamReader.ReadLine()) != null)
-            //{
-            //    string[] line_arr = line.Split(':');
-            //    string title = line_arr.FirstOrDefault();
-            //    try
-            //    {
-            //        trie.Add(title.ToLower(), title);
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        Console.WriteLine(ex.Message);
-            //        continue;
-            //    }
-
-            //}
-            // save trie to runtime cache
+            while ((line = streamReader.ReadLine()) != null)  // save lines to trie
+            {
+                string[] line_arr = line.Split(':');
+                string title = line_arr.FirstOrDefault();
+                try
+                {
+                    trie.Add(title.ToLower(), title);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    continue;
+                }
+            }            
             HttpRuntime.Cache.Insert("trie", trie, null,
-                Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null);
+                Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null); // save trie to runtime cache
             streamReader.Close();
-            // create a stream reader for stopWordsBlockBlob
-            streamReader = new StreamReader(stopWordsBlockBlob.OpenRead());
-            // add lines to stopWords
-            while ((line = streamReader.ReadLine()) != null)
+            streamReader = new StreamReader(stopWordsBlockBlob.OpenRead());  // create a stream reader for stopWordsBlockBlob        
+            while ((line = streamReader.ReadLine()) != null) // add lines to stopWords
             {
                 stopWords.Add(line);
             }
             streamReader.Close();
-            // save stopWords list to runtime cache
             HttpRuntime.Cache.Insert("stopwords", stopWords, null,
-                Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null);
+                Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null); // save stopWords list to runtime cache
         }
 
     }

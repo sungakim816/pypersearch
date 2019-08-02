@@ -23,10 +23,12 @@
                     @{ string snippet = string.Join(" ", page.Content.Split(' ').Take(255));
                         ((List<string>)ViewBag.Keywords).ForEach(x => snippet = Regex.Replace(snippet, x, @"<strong>$0</strong>", RegexOptions.IgnoreCase));
                     }
-                    <p class="justify-content-around text-black-50 small p-1">
+                    <p class="text-black-50 small p-1">
                         @if (page.PublishDate != null)
-                        {<span class="font-weight-bold">@page.PublishDate - </span>}
+                        {<span class="font-weight-bold">@page.PublishDate - </span>}                   
+                    <span class="justify-content-sm-end">
                         @Html.Raw(WebUtility.HtmlDecode(snippet)).....
+                    </span>
                     </p>
                 </div>
             }
@@ -74,11 +76,9 @@
     <div class="col">
         @if (ViewBag.NbaPlayer != null)
         {
-
             <div class="embed-responsive embed-responsive-1by1">
                 <iframe class="embed-responsive-item" src="@ViewBag.NbaPlayer.Framelink"></iframe>
             </div>
-
         }
     </div>
 </div>
@@ -86,6 +86,15 @@
 @section scripts {
     <script>
         $("#home-tab").addClass("active");
+
+        function updateQuerySuggestions(query) {
+            if (query.length == 0) {
+                return;
+            }
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("GET", '@Url.Action("UpdateQuerySuggestions", "Search")' + '?query=' + query);
+            xmlhttp.send();
+        }
 
         function showQuerySuggestions(str) {
             if (str.length == 0) {
