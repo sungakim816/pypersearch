@@ -14,7 +14,7 @@
             {
                 <div class="list-group-item p-2" target="_blank">
                     <a href="@page.Url" class="d-flex w-100 text-decoration-none" target="_blank" onclick="incrementClicks('@page.PartitionKey', '@page.RowKey')">
-                        <span class="mb-1 text-primary h5">@page.Title &nbsp;|&nbsp;@page.Domain</span>
+                        <span class="mb-1 text-primary h5">@page.Title &nbsp;|&nbsp;@page.PartitionKey</span>
                     </a>
                     <small class="mb-1 text-justify font-weight-normal">
                         <a href="@page.Url" target="_blank" class="text-decoration-none text-info" onclick="incrementClicks('@page.PartitionKey', '@page.RowKey')">@page.Url</a>

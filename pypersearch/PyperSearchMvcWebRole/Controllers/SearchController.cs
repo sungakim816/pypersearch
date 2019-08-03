@@ -83,7 +83,6 @@ namespace PyperSearchMvcWebRole.Controllers
             WebClient client = new WebClient();
             string url = string.Format("http://ec2-54-254-229-239.ap-southeast-1.compute.amazonaws.com/api/player/{0}/{1}", firstName, lastName);
             var result = client.DownloadString(url);
-            Trace.TraceInformation(result);
             if (string.IsNullOrEmpty(result) || string.IsNullOrWhiteSpace(result))
             {
                 return null;
@@ -108,12 +107,10 @@ namespace PyperSearchMvcWebRole.Controllers
             ViewBag.Query = query;
             var queryList = query.ToLower().Split(' '); // create an array/list from the words found in the query
             List<string> keywords = GetValidKeywords(query); // get valid keywords
-            try
+            if (queryList.Count() >= 2)  // try to get nba player stats
             {
-                ViewBag.NbaPlayer = GetNbaPlayerStats(queryList.First(), queryList[1]); // try to get nba player stats
+                ViewBag.NbaPlayer = GetNbaPlayerStats(queryList.First(), queryList[1]);
             }
-            catch (Exception)
-            { }
             if (!keywords.Any()) // check if empty
             {
                 keywords = query.ToLower().Split(' ').ToList(); // use the query as is.
@@ -127,16 +124,13 @@ namespace PyperSearchMvcWebRole.Controllers
             foreach (string name in domainNames)  // create tables using retrieve domain names
             {
                 CloudTable table = tableClient.GetTableReference(name);
-                bool? exists = await table.ExistsAsync();
-                if (exists != null && exists.Value == true)
-                {
-                    domainTableList.Add(table);
-                }
+                table.CreateIfNotExists();
+                domainTableList.Add(table);
             }
             List<WebsitePage> partialResults = new List<WebsitePage>();
             foreach (CloudTable table in domainTableList) // retrieve pages from those tables using keyword as partition key
             {
-                foreach (string keyword in keywords)
+                foreach (string keyword in keywords) // retrieve pages from those tables using keyword as partition key
                 {
                     string keywordEncoded = HttpUtility.UrlEncode(keyword);
                     TableQuery<WebsitePage> q = new TableQuery<WebsitePage>()
@@ -152,20 +146,23 @@ namespace PyperSearchMvcWebRole.Controllers
                     } while (continuationToken != null);
                 }
             }
-            var partial = partialResults // ranking based on keyword matches (keyword = rowKey)
+            var partial = partialResults // ranking based on keyword matches (keyword = partitionKey)
                 .GroupBy(r => r.RowKey) // group by row key
-                .OrderByDescending(r => r.Count()) // count occurances 
-                .SelectMany(r => r) // select all
-                .GroupBy(r => r.RowKey) // group again
-                .Select(r => r.FirstOrDefault()).Take(50); // select distinct value and limit result to 'n'
+                .OrderByDescending(r => r.Count())
+                .Select(r => r.FirstOrDefault()).Take(100); // get distinct values
             List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
             foreach (var page in partial)
             {
-                TableOperation single = TableOperation.Retrieve<WebsitePage>(page.Domain, page.RowKey);
-                var result = await websitePageMasterTable.ExecuteAsync(single);
-                if (result.Result != null)
+                TableQuery<WebsitePage> single = new TableQuery<WebsitePage>()
+                    .Where(TableQuery.CombineFilters(
+                        TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, page.Domain),
+                        TableOperators.And,
+                        TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, page.RowKey)))
+                    .Select(new string[] { "PartitionKey", "RowKey", "Url", "Title", "Content", "PublishDate", "Clicks" });
+                var element = websitePageMasterTable.ExecuteQuery(single).FirstOrDefault();
+                if (element != null)
                 {
-                    finalResult.Add((WebsitePage)result.Result);
+                    finalResult.Add(element);
                 }
             }
             return View(finalResult.OrderByDescending(x => x.Clicks).ToPagedList((int)pageNumber, pageSize));

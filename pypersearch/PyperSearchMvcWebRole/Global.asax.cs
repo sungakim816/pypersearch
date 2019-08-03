@@ -4,6 +4,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Web;
@@ -52,7 +53,7 @@ namespace PyperSearchMvcWebRole
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    Trace.TraceInformation(ex.Message + " -TriNet");
                     continue;
                 }
             }
