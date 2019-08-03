@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.WindowsAzure;
-using Microsoft.WindowsAzure.Diagnostics;
+using System.Diagnostics;
 using Microsoft.WindowsAzure.ServiceRuntime;
 
 namespace PyperSearchMvcWebRole
@@ -13,7 +9,7 @@ namespace PyperSearchMvcWebRole
         {
             // For information on handling configuration changes
             // see the MSDN topic at https://go.microsoft.com/fwlink/?LinkId=166357.
-
+            RoleEnvironment.TraceSource.Switch.Level = SourceLevels.Information;
             return base.OnStart();
         }
     }

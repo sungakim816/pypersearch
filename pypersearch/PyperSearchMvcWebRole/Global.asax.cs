@@ -1,18 +1,16 @@
-﻿using Microsoft.WindowsAzure.ServiceRuntime;
+﻿using Gma.DataStructures.StringSearch;
+using Microsoft.WindowsAzure.ServiceRuntime;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-using PyperSearchMvcWebRole.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Web;
 using System.Web.Caching;
 using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
-using Gma.DataStructures.StringSearch;
 
 namespace PyperSearchMvcWebRole
 {
@@ -57,7 +55,7 @@ namespace PyperSearchMvcWebRole
                     Console.WriteLine(ex.Message);
                     continue;
                 }
-            }            
+            }
             HttpRuntime.Cache.Insert("trie", trie, null,
                 Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null); // save trie to runtime cache
             streamReader.Close();
@@ -70,6 +68,5 @@ namespace PyperSearchMvcWebRole
             HttpRuntime.Cache.Insert("stopwords", stopWords, null,
                 Cache.NoAbsoluteExpiration, Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null); // save stopWords list to runtime cache
         }
-
     }
 }

@@ -31,6 +31,8 @@ namespace PyperSearchMvcWebRole.Models
 
         public string ErrorDetails { get; set; }
 
+        public DateTime DateCrawled { get; set; }
+
         [Required]
         public string Url
         {
@@ -62,6 +64,7 @@ namespace PyperSearchMvcWebRole.Models
             this.Title = "Title";
             this.Content = "Content Preview Not Available";
             this.Clicks = 0;
+            this.DateCrawled = DateTime.Now;
         }
 
         public WebsitePage(string partitionKey, string rowKey)
@@ -79,6 +82,7 @@ namespace PyperSearchMvcWebRole.Models
             this.Title = "Title";
             this.Content = "Content Preview Not Available";
             this.Clicks = 0;
+            this.DateCrawled = DateTime.Now;
         }
 
         private string Generate256HashCode(string s)

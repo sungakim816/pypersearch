@@ -152,15 +152,14 @@ namespace PyperSearchMvcWebRole.Controllers
                     } while (continuationToken != null);
                 }
             }
-            partialResults = partialResults // ranking based on keyword matches (keyword = rowKey)
+            var partial = partialResults // ranking based on keyword matches (keyword = rowKey)
                 .GroupBy(r => r.RowKey) // group by row key
                 .OrderByDescending(r => r.Count()) // count occurances 
                 .SelectMany(r => r) // select all
                 .GroupBy(r => r.RowKey) // group again
-                .Select(r => r.First()).Take(50) // select distinct value and limit result to 100
-                .ToList();
+                .Select(r => r.FirstOrDefault()).Take(50); // select distinct value and limit result to 'n'
             List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
-            foreach (var page in partialResults)
+            foreach (var page in partial)
             {
                 TableOperation single = TableOperation.Retrieve<WebsitePage>(page.Domain, page.RowKey);
                 var result = await websitePageMasterTable.ExecuteAsync(single);
@@ -169,8 +168,7 @@ namespace PyperSearchMvcWebRole.Controllers
                     finalResult.Add((WebsitePage)result.Result);
                 }
             }
-            finalResult = finalResult.OrderByDescending(x => x.Clicks).ToList();
-            return View(finalResult.ToPagedList((int)pageNumber, pageSize));
+            return View(finalResult.OrderByDescending(x => x.Clicks).ToPagedList((int)pageNumber, pageSize));
         }
 
         [HttpGet]
