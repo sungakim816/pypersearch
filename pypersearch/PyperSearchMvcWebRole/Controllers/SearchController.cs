@@ -137,7 +137,6 @@ namespace PyperSearchMvcWebRole.Controllers
                 table.CreateIfNotExists();
                 domainTableList.Add(table);
             }
-
             List<WebsitePage> partialResults = new List<WebsitePage>();
             TableContinuationToken continuationToken = null;
             TableQuery<WebsitePage> tableQuery = new TableQuery<WebsitePage>().Select(new string[] { "Rowkey", "Domain" });
@@ -158,7 +157,7 @@ namespace PyperSearchMvcWebRole.Controllers
             var partial = partialResults // ranking based on keyword matches (keyword = partitionKey)
                 .GroupBy(r => r.RowKey) // group by row key
                 .OrderByDescending(r => r.Count()) // order based on frequency
-                .Select(r => r.FirstOrDefault()).Take(100); // get distinct values
+                .Select(r => r.FirstOrDefault()).Take(100); // get distinct values and take 'n' elements
             List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
             foreach (var page in partial)
             {
