@@ -19,14 +19,14 @@
                     <small class="mb-1 text-justify font-weight-normal">
                         <a href="@page.Url" target="_blank" class="text-decoration-none text-info" onclick="incrementClicks('@page.PartitionKey', '@page.RowKey')">@page.Url</a>
                     </small>
-                    @{ string snippet = string.Join(" ", page.Content.Split(' ').Take(255));
+                    @{ string snippet = string.Join(" ", page.Content.Split(' ').Take(150));
                         ((List<string>)ViewBag.Keywords).ForEach(x => snippet = Regex.Replace(snippet, x, @"<strong>$0</strong>", RegexOptions.IgnoreCase));
                     }
                     <p class="text-black-50 small p-1">
                         @if (page.PublishDate != null)
                         {<span class="font-weight-bold">@page.PublishDate - </span>}
                         <span class="justify-content-sm-end">
-                            @Html.Raw(WebUtility.HtmlDecode(snippet)).....
+                            @Html.Raw(snippet).....
                         </span>
                     </p>
                 </div>

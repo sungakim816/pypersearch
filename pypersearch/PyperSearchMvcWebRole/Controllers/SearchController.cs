@@ -18,17 +18,17 @@ namespace PyperSearchMvcWebRole.Controllers
 {
     public class SearchController : Controller
     {
-        // GET: Search
         private PatriciaTrie<string> trie;
-        private readonly char[] disallowedCharacters;
-        private readonly List<string> stopwords;
+        private List<string> stopwords;
+        private readonly char[] disallowedCharacters;    
         private readonly CloudStorageAccount storageAccount;
         private readonly CloudTableClient tableClient;
-
         private readonly CloudTable websitePageMasterTable;
         private readonly CloudTable domainTable;
 
-
+        /// <summary>
+        /// Controller
+        /// </summary>
         public SearchController()
         {
             storageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("StorageConnectionString"));
@@ -39,7 +39,6 @@ namespace PyperSearchMvcWebRole.Controllers
             domainTable.CreateIfNotExistsAsync(); // create if not exists
             websitePageMasterTable.CreateIfNotExistsAsync(); // create if not exists
             disallowedCharacters = new[] { '?', ',', ':', ';', '!', '&', '(', ')', '"' };
-            stopwords = (List<string>)HttpRuntime.Cache["stopwords"];
         }
 
         /// <summary>
@@ -53,6 +52,7 @@ namespace PyperSearchMvcWebRole.Controllers
             {
                 return new List<string>();
             }
+            stopwords = (List<string>)HttpRuntime.Cache["stopwords"];
             IEnumerable<string> keywords = query.ToLower().Split(' ').AsEnumerable(); // split 'query' into 'keywords'
             keywords = keywords
                 .Where(k => k.Length >= 2 && !stopwords.Contains(k.Trim()) && k.Any(c => char.IsLetter(c)))
@@ -62,7 +62,7 @@ namespace PyperSearchMvcWebRole.Controllers
             {
                 string keyword = word;
                 keyword = new string(keyword.ToCharArray().Where(c => !disallowedCharacters.Contains(c)).ToArray()); // check for disallowed characters
-                if (keyword.IndexOf("'s") >= 0)
+                while (keyword.IndexOf("'s") >= 0)
                 {
                     keyword = keyword.Remove(keyword.IndexOf("'s"), 2);  // remove 's
                 }
@@ -114,21 +114,20 @@ namespace PyperSearchMvcWebRole.Controllers
                 return View(Enumerable.Empty<WebsitePage>().ToPagedList(1, 1));
             }
             int pageSize = 15; // items per pages
-            pageNumber = !pageNumber.HasValue ? 1 : pageNumber; // page number
-            ViewBag.Query = query;
-            var queryList = query.ToLower().Split(' '); // create an array/list from the words found in the query
+            pageNumber = pageNumber.HasValue ? pageNumber : 1; // page number
+            ViewBag.Query = query; // save raw query 
             List<string> keywords = GetValidKeywords(query); // get valid keywords
-            if (queryList.Count() >= 2)  // try to get nba player stats
-            {
-                ViewBag.NbaPlayer = GetNbaPlayerStats(queryList.First(), queryList[1]);
-            }
             if (!keywords.Any()) // check if empty
             {
                 keywords = query.ToLower().Split(' ').ToList(); // use the query as is.
             }
+            if (keywords.Count() >= 2)  // try to get nba player stats
+            {
+                ViewBag.NbaPlayer = GetNbaPlayerStats(keywords.First(), keywords[1]);
+            }
             ViewBag.Keywords = keywords; // store query for body snippet highligthing 
             // get all indexed domain names (just select partition key for better performance)
-            var domainNames = domainTable.ExecuteQuery(new TableQuery<DynamicTableEntity>().Select(new List<string> { "PartitionKey" })).Select(x => x.PartitionKey);  
+            var domainNames = domainTable.ExecuteQuery(new TableQuery<DynamicTableEntity>().Select(new List<string> { "PartitionKey" })).Select(x => x.PartitionKey);
             List<WebsitePage> partialResults = new List<WebsitePage>();
             TableContinuationToken continuationToken = null;
             TableQuery<WebsitePage> tableQuery = new TableQuery<WebsitePage>().Select(new string[] { "Rowkey", "Domain" });
@@ -139,7 +138,7 @@ namespace PyperSearchMvcWebRole.Controllers
                     TableQuery<WebsitePage> q = tableQuery.Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keyword));
                     try
                     {
-                        CloudTable table = tableClient.GetTableReference(tableName);
+                        CloudTable table = tableClient.GetTableReference(tableName); // get table reference
                         do
                         {
                             TableQuerySegment<WebsitePage> segmentResult = await table
@@ -148,11 +147,11 @@ namespace PyperSearchMvcWebRole.Controllers
                             partialResults.AddRange(segmentResult.Results);
                         } while (continuationToken != null);
                     }
-                    catch(Exception)
+                    catch (Exception)
                     {
                         Trace.TraceInformation("Table '" + tableName + "' does not exist");
                         break;
-                    }   
+                    }
                 }
             }
             var partial = partialResults // ranking based on keyword matches (keyword = partitionKey)
@@ -208,8 +207,8 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/Increment/Click/{partitionkey}/{rowkey}")]
         public async Task<ActionResult> IncrementClickRank(string partitionkey, string rowkey)
         {
-            TableOperation single = TableOperation.Retrieve<WebsitePage>(partitionkey, rowkey);
-            var page = await websitePageMasterTable.ExecuteAsync(single);
+            TableOperation single = TableOperation.Retrieve<WebsitePage>(partitionkey, rowkey); // retrieve element using partitionKey and rowKey
+            var page = await websitePageMasterTable.ExecuteAsync(single); // execute command/query
             if (page == null)
             {
                 return new EmptyResult();
@@ -238,6 +237,11 @@ namespace PyperSearchMvcWebRole.Controllers
                 HttpRuntime.Cache["trie"] = trie;
             }
             return new EmptyResult();
+        }
+
+        public ActionResult InstantResult(string query)
+        {
+            return View();
         }
     }
 }
