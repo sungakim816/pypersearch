@@ -19,7 +19,7 @@ namespace PyperSearchMvcWebRole.Controllers
     public class SearchController : Controller
     {
         // GET: Search
-        private readonly PatriciaTrie<string> trie;
+        private PatriciaTrie<string> trie;
         private readonly char[] disallowedCharacters;
         private readonly List<string> stopwords;
         private readonly CloudStorageAccount storageAccount;
@@ -38,8 +38,6 @@ namespace PyperSearchMvcWebRole.Controllers
 
             domainTable.CreateIfNotExistsAsync(); // create if not exists
             websitePageMasterTable.CreateIfNotExistsAsync(); // create if not exists
-
-            trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie");
             disallowedCharacters = new[] { '?', ',', ':', ';', '!', '&', '(', ')', '"' };
             stopwords = (List<string>)HttpRuntime.Cache["stopwords"];
         }
@@ -78,6 +76,12 @@ namespace PyperSearchMvcWebRole.Controllers
             return filteredKeywords;
         }
 
+        /// <summary>
+        /// Method to get NBA Player Statistics From PA 1
+        /// </summary>
+        /// <param name="firstName"></param>
+        /// <param name="lastName"></param>
+        /// <returns></returns>
         private NbaStatistics GetNbaPlayerStats(string firstName, string lastName)
         {
             WebClient client = new WebClient();
@@ -88,9 +92,16 @@ namespace PyperSearchMvcWebRole.Controllers
                 return null;
             }
             var playerJson = JsonConvert.DeserializeObject<NbaStatistics>(result);
+            client.Dispose();
             return playerJson;
         }
 
+        /// <summary>
+        /// Method for Searching and displaying Results
+        /// </summary>
+        /// <param name="query"></param>
+        /// <param name="pageNumber"></param>
+        /// <returns></returns>
         [HttpGet]
         [OutputCache(Duration = 60, VaryByParam = "*")]
         [Route("Search/")]
@@ -117,9 +128,8 @@ namespace PyperSearchMvcWebRole.Controllers
             }
             ViewBag.Keywords = keywords; // store query for body snippet highligthing 
             var domainNames = domainTable.ExecuteQuery(  // get all indexed domain names
-                    new TableQuery<DynamicTableEntity>()
-                    .Select(new List<string> { "PartitionKey" })
-                ).Select(x => x.PartitionKey); // select only partition key for better performance
+                    new TableQuery<DynamicTableEntity>().Select(new List<string> { "PartitionKey" })
+                ).Select(x => x.PartitionKey); // just select partition key for better performance
             List<CloudTable> domainTableList = new List<CloudTable>(); // create list for all possible cloud tables
             foreach (string name in domainNames)  // create tables using retrieve domain names
             {
@@ -127,28 +137,27 @@ namespace PyperSearchMvcWebRole.Controllers
                 table.CreateIfNotExists();
                 domainTableList.Add(table);
             }
+
             List<WebsitePage> partialResults = new List<WebsitePage>();
-            foreach (CloudTable table in domainTableList) // retrieve pages from those tables using keyword as partition key
+            TableContinuationToken continuationToken = null;
+            TableQuery<WebsitePage> tableQuery = new TableQuery<WebsitePage>().Select(new string[] { "Rowkey", "Domain" });
+            foreach (CloudTable table in domainTableList) // retrieve page objects from those tables using keyword as partition key
             {
-                foreach (string keyword in keywords) // retrieve pages from those tables using keyword as partition key
+                foreach (string keyword in keywords.Select(r => HttpUtility.UrlEncode(r))) // retrieve pages from those tables using keyword as partition key
                 {
-                    string keywordEncoded = HttpUtility.UrlEncode(keyword);
-                    TableQuery<WebsitePage> q = new TableQuery<WebsitePage>()
-                        .Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keywordEncoded))
-                         .Select(new List<string> { "RowKey", "Domain" });
-                    TableContinuationToken continuationToken = null;
+                    TableQuery<WebsitePage> q = tableQuery.Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keyword));
                     do
                     {
                         TableQuerySegment<WebsitePage> segmentResult = await table
                             .ExecuteQuerySegmentedAsync(q, continuationToken);
                         continuationToken = segmentResult.ContinuationToken;
-                        partialResults.AddRange(segmentResult);
+                        partialResults.AddRange(segmentResult.Results);
                     } while (continuationToken != null);
                 }
             }
             var partial = partialResults // ranking based on keyword matches (keyword = partitionKey)
                 .GroupBy(r => r.RowKey) // group by row key
-                .OrderByDescending(r => r.Count())
+                .OrderByDescending(r => r.Count()) // order based on frequency
                 .Select(r => r.FirstOrDefault()).Take(100); // get distinct values
             List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
             foreach (var page in partial)
@@ -159,7 +168,7 @@ namespace PyperSearchMvcWebRole.Controllers
                         TableOperators.And,
                         TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, page.RowKey)))
                     .Select(new string[] { "PartitionKey", "RowKey", "Url", "Title", "Content", "PublishDate", "Clicks" });
-                var element = websitePageMasterTable.ExecuteQuery(single).FirstOrDefault();
+                var element = websitePageMasterTable.ExecuteQuery(single).First();
                 if (element != null)
                 {
                     finalResult.Add(element);
@@ -168,11 +177,17 @@ namespace PyperSearchMvcWebRole.Controllers
             return View(finalResult.OrderByDescending(x => x.Clicks).ToPagedList((int)pageNumber, pageSize));
         }
 
+        /// <summary>
+        /// Method for Autocomplete Functionality
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
         [HttpGet]
         [Route("Search/Autocomplete")]
         [Route("Search/Autocomplete/{query}")]
         public ActionResult Autocomplete(string query)
         {
+            trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie");
             if (string.IsNullOrEmpty(query) || string.IsNullOrWhiteSpace(query))
             {
                 return View(Enumerable.Empty<string>());
@@ -182,6 +197,12 @@ namespace PyperSearchMvcWebRole.Controllers
             return View(suggestions);
         }
 
+        /// <summary>
+        /// Method for Increasing Article/Page Rank Based on User Clicks on URL
+        /// </summary>
+        /// <param name="partitionkey"></param>
+        /// <param name="rowkey"></param>
+        /// <returns></returns>
         [HttpGet]
         [Route("Search/IncrementClickRank")]
         [Route("Search/Increment/Click/{partitionkey}/{rowkey}")]
@@ -200,11 +221,17 @@ namespace PyperSearchMvcWebRole.Controllers
             return new EmptyResult();
         }
 
+        /// <summary>
+        /// Update Query Suggestions (Adding New Suggestions based on user searches)
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
         [HttpGet]
         [Route("Search/UpdateQuerySuggestions")]
         [Route("Search/Update/Suggestions/{query}")]
         public ActionResult UpdateQuerySuggestions(string query)
         {
+            trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie");
             if (!trie.Retrieve(query.ToLower()).Any())
             {
                 trie.Add(query.ToLower(), query);
