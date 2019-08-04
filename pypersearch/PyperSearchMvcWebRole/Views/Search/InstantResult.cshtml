@@ -1,0 +1,38 @@
+﻿@model IEnumerable<PyperSearchMvcWebRole.Models.WebsitePage>
+@using System.Linq;
+@using System.Text.RegularExpressions;
+
+@if (Model != null && Model.Any())
+{
+    <div class="list-group list-group-flush w-50 text-break col-lg-6 mr-4 ml-4">
+        @foreach (var page in Model)
+        {
+            <div class="list-group-item p-2" target="_blank">
+                <a href="@page.Url" class="d-flex w-100 text-decoration-none" target="_blank" onclick="incrementClicks('@page.PartitionKey', '@page.RowKey')">
+                    <span class="mb-1 text-primary h5">@page.Title &nbsp;|&nbsp;@page.PartitionKey</span>
+                </a>
+                <small class="mb-1 text-justify font-weight-normal">
+                    <a href="@page.Url" target="_blank" class="text-decoration-none text-info" onclick="incrementClicks('@page.PartitionKey', '@page.RowKey')">@page.Url</a>
+                </small>
+                @{ string snippet = string.Join(" ", page.Content.Split(' ').Take(150));
+                    ((List<string>)ViewBag.Keywords).ForEach(x => snippet = Regex.Replace(snippet, x, @"<strong>$0</strong>", RegexOptions.IgnoreCase));
+                }
+                <p class="text-black-50 small p-1">
+                    @if (page.PublishDate != null)
+                    {<span class="font-weight-bold">@page.PublishDate - </span>}
+                    <span class="justify-content-sm-end">
+                        @Html.Raw(snippet).....
+                    </span>
+                </p>
+            </div>
+        }
+    </div>
+}
+<div class="col">
+    @if (ViewBag.NbaPlayer != null)
+    {
+        <div class="embed-responsive embed-responsive-1by1">
+            <iframe class="embed-responsive-item" src="@ViewBag.NbaPlayer.Framelink"></iframe>
+        </div>
+    }
+</div>

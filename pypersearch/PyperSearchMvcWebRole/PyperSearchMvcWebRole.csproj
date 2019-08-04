@@ -296,6 +296,7 @@
     <Content Include="Views\Search\Index.cshtml" />
     <Content Include="Views\Shared\_NavSearchBar.cshtml" />
     <Content Include="Views\Shared\_SearchBar.cshtml" />
+    <Content Include="Views\Search\InstantResult.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

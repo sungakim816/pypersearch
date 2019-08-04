@@ -1,13 +1,12 @@
 ﻿@using System.Text.RegularExpressions;
 @using System.Linq;
 @model PagedList.IPagedList<PyperSearchMvcWebRole.Models.WebsitePage>
-
 @{
     ViewBag.Title = "Search";
 }
 @Html.Partial("_NavSearchBar")
-<div class="row container-fluid bg-transparent p-lg-4">
-    @if ((Model != null && Model.PageCount > 0))
+<div class="row container-fluid bg-transparent p-lg-4" id="search-result">
+    @if ((Model != null && Model.Any()))
     {
         <div class="list-group list-group-flush w-50 text-break col-lg-6 mr-4 ml-4">
             @foreach (var page in Model)
@@ -57,7 +56,7 @@
             </nav>
         </div>
     }
-    else if (Model != null && Model.PageCount == 0 && ViewBag.NbaPlayer == null)
+    else if (Model != null && !Model.Any() && ViewBag.NbaPlayer == null)
     {
         <div class="alert alert-info list-group list-group-flush text-break col m-4 w-75" role="alert">
             <div class="p-lg-4">
@@ -94,8 +93,8 @@
             xmlhttp.send();
         }
 
-        function showQuerySuggestions(str) {
-            if (str.length == 0) {
+        function showQuerySuggestions(query) {
+            if (query.length == 0) {
                 $("#query-suggestions").empty();
                 return;
             }
@@ -105,17 +104,17 @@
                     $("#query-suggestions").show();
                     $("#query-suggestions").html(this.responseText);
                 }
-            }
-            var actionUrl = '@Url.Action("Autocomplete", "Search")' + '?query=' + str;
+            };
+            var actionUrl = '@Url.Action("Autocomplete", "Search")' + '?query=' + query;
             xmlhttp.open('GET', actionUrl, true);
             xmlhttp.send();
         }
 
-        function changeSearchBoxValue(str) {
-            if (str.length == 0) {
+        function changeSearchBoxValue(query) {
+            if (query.length == 0) {
                 return;
             }
-            $("#search-box").val(str);
+            $("#search-box").val(query);
             $('#query-suggestions').hide();
             $('#search-box').focus();
         }
@@ -127,6 +126,20 @@
             xmlhttp.send();
         }
 
+        function instantResult(query) {
+            if (query.length == 0) {
+                $("#search-result").html("");
+            }
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    $("#search-result").html(this.responseText);
+                }
+            };
+            var actionUrl = "@Url.Action("InstantResult", "Search")" + "?query=" + query;
+            xmlhttp.open("GET", actionUrl, true);
+            xmlhttp.send();
+        }
     </script>
 }
 

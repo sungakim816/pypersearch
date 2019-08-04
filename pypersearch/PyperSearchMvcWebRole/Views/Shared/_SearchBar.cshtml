@@ -2,7 +2,7 @@
     <form method="get" action="@Url.Action("Index", "Search")" onsubmit='updateQuerySuggestions($("#search-box").val())'>
         <div class="w-100">
             <div class="searchbar text-black-50 mh-100">
-                <input id="search-box" class="search_input" type="text" name="query" maxlength="255" onkeyup="showQuerySuggestions(this.value)" placeholder="Search Keywords e.g Hello" value="@ViewBag.query" autocomplete="off" required>
+                <input id="search-box" class="search_input" type="text" name="query" maxlength="255" onkeyup="showQuerySuggestions(this.value);instantResult(this.value)" placeholder="Search Keywords e.g Hello" value="@ViewBag.query" autocomplete="off" required>
                 <button type="submit" class="search_icon bg-primary"><i class="fas fa-search text-white"></i></button>
             </div>
         </div>
@@ -10,4 +10,4 @@
     </form>
 </div>
 
- 
+

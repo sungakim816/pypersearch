@@ -54,6 +54,10 @@ namespace PyperSearchMvcWebRole.Controllers
             }
             stopwords = (List<string>)HttpRuntime.Cache["stopwords"];
             IEnumerable<string> keywords = query.ToLower().Split(' ').AsEnumerable(); // split 'query' into 'keywords'
+            if(keywords.Count() == 1)
+            {
+                return keywords.ToList();
+            }
             keywords = keywords
                 .Where(k => k.Length >= 2 && !stopwords.Contains(k.Trim()) && k.Any(c => char.IsLetter(c)))
                 .Select(k => k.Trim('\'').Trim('"').Trim()); // remove unnecessary characters
@@ -239,9 +243,77 @@ namespace PyperSearchMvcWebRole.Controllers
             return new EmptyResult();
         }
 
-        public ActionResult InstantResult(string query)
+        /// <summary>
+        /// Method for Google Like Instant Search
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("Search/InstantResult")]
+        [Route("Search/Instant/Result/{query}")]
+        public async Task<ActionResult> InstantResult(string query)
         {
-            return View();
+            if (string.IsNullOrEmpty(query))
+            {
+                return View(Enumerable.Empty<WebsitePage>());
+            }
+            List<string> keywords = GetValidKeywords(query); // get valid keywords
+            if (!keywords.Any()) // check if empty
+            {
+                keywords = query.ToLower().Split(' ').ToList(); // use the query as is.
+            }
+            if (keywords.Count() >= 2)  // try to get nba player stats
+            {
+                ViewBag.NbaPlayer = GetNbaPlayerStats(keywords.First(), keywords[1]);
+            }
+            ViewBag.Keywords = keywords; // store query for body snippet highligthing 
+            // get all indexed domain names (just select partition key for better performance)
+            var domainNames = domainTable.ExecuteQuery(new TableQuery<DynamicTableEntity>().Select(new List<string> { "PartitionKey" })).Select(x => x.PartitionKey);
+            List<WebsitePage> partialResults = new List<WebsitePage>();
+            TableContinuationToken continuationToken = null;
+            TableQuery<WebsitePage> tableQuery = new TableQuery<WebsitePage>().Select(new string[] { "Rowkey", "Domain" });
+            foreach (string tableName in domainNames) // retrieve page objects from those tables using keyword as partition key
+            {
+                foreach (string keyword in keywords.Select(r => HttpUtility.UrlEncode(r))) // retrieve pages from those tables using keyword as partition key
+                {
+                    TableQuery<WebsitePage> q = tableQuery.Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keyword));
+                    try
+                    {
+                        CloudTable table = tableClient.GetTableReference(tableName); // get table reference
+                        do
+                        {
+                            TableQuerySegment<WebsitePage> segmentResult = await table
+                                .ExecuteQuerySegmentedAsync(q, continuationToken);
+                            continuationToken = segmentResult.ContinuationToken;
+                            partialResults.AddRange(segmentResult.Results);
+                        } while (continuationToken != null);
+                    }
+                    catch (Exception)
+                    {
+                        break;
+                    }
+                }
+            }
+            var partial = partialResults // ranking based on keyword matches (keyword = partitionKey)
+                .GroupBy(r => r.RowKey) // group by row key
+                .OrderByDescending(r => r.Count()) // order based on frequency
+                .Select(r => r.FirstOrDefault()).Take(50); // get distinct values and take 'n' elements
+            List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
+            foreach (var page in partial)
+            {
+                TableQuery<WebsitePage> single = new TableQuery<WebsitePage>()
+                    .Where(TableQuery.CombineFilters(
+                        TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, page.Domain),
+                        TableOperators.And,
+                        TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, page.RowKey)))
+                    .Select(new string[] { "PartitionKey", "RowKey", "Url", "Title", "Content", "PublishDate", "Clicks" });
+                var element = websitePageMasterTable.ExecuteQuery(single).First();
+                if (element != null)
+                {
+                    finalResult.Add(element);
+                }
+            }
+            return View(finalResult.OrderByDescending(x => x.Clicks).Take(15));
         }
     }
 }
