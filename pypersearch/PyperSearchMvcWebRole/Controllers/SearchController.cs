@@ -127,31 +127,32 @@ namespace PyperSearchMvcWebRole.Controllers
                 keywords = query.ToLower().Split(' ').ToList(); // use the query as is.
             }
             ViewBag.Keywords = keywords; // store query for body snippet highligthing 
-            var domainNames = domainTable.ExecuteQuery(  // get all indexed domain names
-                    new TableQuery<DynamicTableEntity>().Select(new List<string> { "PartitionKey" })
-                ).Select(x => x.PartitionKey); // just select partition key for better performance
-            List<CloudTable> domainTableList = new List<CloudTable>(); // create list for all possible cloud tables
-            foreach (string name in domainNames)  // create tables using retrieve domain names
-            {
-                CloudTable table = tableClient.GetTableReference(name);
-                table.CreateIfNotExists();
-                domainTableList.Add(table);
-            }
+            // get all indexed domain names (just select partition key for better performance)
+            var domainNames = domainTable.ExecuteQuery(new TableQuery<DynamicTableEntity>().Select(new List<string> { "PartitionKey" })).Select(x => x.PartitionKey);  
             List<WebsitePage> partialResults = new List<WebsitePage>();
             TableContinuationToken continuationToken = null;
             TableQuery<WebsitePage> tableQuery = new TableQuery<WebsitePage>().Select(new string[] { "Rowkey", "Domain" });
-            foreach (CloudTable table in domainTableList) // retrieve page objects from those tables using keyword as partition key
+            foreach (string tableName in domainNames) // retrieve page objects from those tables using keyword as partition key
             {
                 foreach (string keyword in keywords.Select(r => HttpUtility.UrlEncode(r))) // retrieve pages from those tables using keyword as partition key
                 {
                     TableQuery<WebsitePage> q = tableQuery.Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, keyword));
-                    do
+                    try
                     {
-                        TableQuerySegment<WebsitePage> segmentResult = await table
-                            .ExecuteQuerySegmentedAsync(q, continuationToken);
-                        continuationToken = segmentResult.ContinuationToken;
-                        partialResults.AddRange(segmentResult.Results);
-                    } while (continuationToken != null);
+                        CloudTable table = tableClient.GetTableReference(tableName);
+                        do
+                        {
+                            TableQuerySegment<WebsitePage> segmentResult = await table
+                                .ExecuteQuerySegmentedAsync(q, continuationToken);
+                            continuationToken = segmentResult.ContinuationToken;
+                            partialResults.AddRange(segmentResult.Results);
+                        } while (continuationToken != null);
+                    }
+                    catch(Exception)
+                    {
+                        Trace.TraceInformation("Table '" + tableName + "' does not exist");
+                        break;
+                    }   
                 }
             }
             var partial = partialResults // ranking based on keyword matches (keyword = partitionKey)
