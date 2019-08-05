@@ -2,6 +2,8 @@
 @using System.Linq;
 @using System.Text.RegularExpressions;
 
+@{Layout = null;}
+
 @if (Model != null && Model.Any())
 {
     <div class="list-group list-group-flush w-50 text-break col-lg-6 mr-4 ml-4">
@@ -28,7 +30,7 @@
         }
     </div>
 }
-<div class="col">
+<div class="col-lg-6">
     @if (ViewBag.NbaPlayer != null)
     {
         <div class="embed-responsive embed-responsive-1by1">
@@ -36,3 +38,5 @@
         </div>
     }
 </div>
+
+
