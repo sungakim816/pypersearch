@@ -20,7 +20,7 @@ namespace PyperSearchMvcWebRole.Controllers
     {
         private PatriciaTrie<string> trie;
         private List<string> stopwords;
-        private readonly char[] disallowedCharacters;    
+        private readonly char[] disallowedCharacters;
         private readonly CloudStorageAccount storageAccount;
         private readonly CloudTableClient tableClient;
         private readonly CloudTable websitePageMasterTable;
@@ -54,7 +54,7 @@ namespace PyperSearchMvcWebRole.Controllers
             }
             stopwords = (List<string>)HttpRuntime.Cache["stopwords"];
             IEnumerable<string> keywords = query.ToLower().Split(' ').AsEnumerable(); // split 'query' into 'keywords'
-            if(keywords.Count() == 1)
+            if (keywords.Count() == 1)
             {
                 return keywords.ToList();
             }
@@ -73,9 +73,9 @@ namespace PyperSearchMvcWebRole.Controllers
                 keyword = keyword.Trim('\'').Trim('"').Trim('?').TrimEnd('.'); // remove unncessary characters again
                 if (keyword.Length < 2 || stopwords.Contains(keyword)) // check for length and for 'stopwords'
                 {
-                    continue;
+                    continue; // skip
                 }
-                filteredKeywords.Add(keyword);
+                filteredKeywords.Add(keyword); // add to list
             }
             return filteredKeywords;
         }
@@ -89,14 +89,15 @@ namespace PyperSearchMvcWebRole.Controllers
         private NbaStatistics GetNbaPlayerStats(string firstName, string lastName)
         {
             WebClient client = new WebClient();
+            // url to PA 1 (api)
             string url = string.Format("http://ec2-54-254-229-239.ap-southeast-1.compute.amazonaws.com/api/player/{0}/{1}", firstName, lastName);
             var result = client.DownloadString(url);
+            client.Dispose();
             if (string.IsNullOrEmpty(result) || string.IsNullOrWhiteSpace(result))
             {
                 return null;
             }
-            var playerJson = JsonConvert.DeserializeObject<NbaStatistics>(result);
-            client.Dispose();
+            var playerJson = JsonConvert.DeserializeObject<NbaStatistics>(result); // create a json object from api response     
             return playerJson;
         }
 
@@ -143,6 +144,7 @@ namespace PyperSearchMvcWebRole.Controllers
                     try
                     {
                         CloudTable table = tableClient.GetTableReference(tableName); // get table reference
+                        // segmented query
                         do
                         {
                             TableQuerySegment<WebsitePage> segmentResult = await table
@@ -165,6 +167,7 @@ namespace PyperSearchMvcWebRole.Controllers
             List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
             foreach (var page in partial)
             {
+                // query to retrieve single website page object from database with specific columns to improve performance
                 TableQuery<WebsitePage> single = new TableQuery<WebsitePage>()
                     .Where(TableQuery.CombineFilters(
                         TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, page.Domain),
@@ -190,7 +193,7 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/Autocomplete/{query}")]
         public ActionResult Autocomplete(string query)
         {
-            trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie");
+            trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie"); // retrieve trie from cache
             if (string.IsNullOrEmpty(query) || string.IsNullOrWhiteSpace(query))
             {
                 return View(Enumerable.Empty<string>());
@@ -215,10 +218,10 @@ namespace PyperSearchMvcWebRole.Controllers
             var page = await websitePageMasterTable.ExecuteAsync(single); // execute command/query
             if (page == null)
             {
-                return new EmptyResult();
+                return new EmptyResult(); // return empty result
             }
-            var result = page.Result as WebsitePage;
-            result.Clicks += 1;
+            var result = page.Result as WebsitePage; // cast Result Object to WebsitePage
+            result.Clicks += 1; // increment Click Count
             TableOperation update = TableOperation.Merge(result);
             await websitePageMasterTable.ExecuteAsync(update);
             return new EmptyResult();
@@ -244,7 +247,7 @@ namespace PyperSearchMvcWebRole.Controllers
         }
 
         /// <summary>
-        /// Method for Google Like Instant Search
+        /// Method for Google Like Instant Result
         /// </summary>
         /// <param name="query"></param>
         /// <returns></returns>
@@ -290,7 +293,7 @@ namespace PyperSearchMvcWebRole.Controllers
                     }
                     catch (Exception)
                     {
-                        break;
+                        break; // table does not exists
                     }
                 }
             }
@@ -301,6 +304,7 @@ namespace PyperSearchMvcWebRole.Controllers
             List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
             foreach (var page in partial)
             {
+                // query to return single website page object using partitionkey and rowkey
                 TableQuery<WebsitePage> single = new TableQuery<WebsitePage>()
                     .Where(TableQuery.CombineFilters(
                         TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, page.Domain),
@@ -308,12 +312,12 @@ namespace PyperSearchMvcWebRole.Controllers
                         TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, page.RowKey)))
                     .Select(new string[] { "PartitionKey", "RowKey", "Url", "Title", "Content", "PublishDate", "Clicks" });
                 var element = websitePageMasterTable.ExecuteQuery(single).First();
-                if (element != null)
+                if (element != null) // check if Website Page Object Exists
                 {
-                    finalResult.Add(element);
+                    finalResult.Add(element); // add to final list
                 }
             }
-            return View(finalResult.OrderByDescending(x => x.Clicks).Take(15));
+            return View(finalResult.OrderByDescending(x => x.Clicks).Take(15)); // limit result to 15 only
         }
     }
 }
