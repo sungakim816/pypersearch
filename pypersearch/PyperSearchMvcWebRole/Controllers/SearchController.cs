@@ -252,6 +252,7 @@ namespace PyperSearchMvcWebRole.Controllers
         /// <param name="query"></param>
         /// <returns></returns>
         [HttpGet]
+        [OutputCache(Duration = 120, VaryByParam = "query")]
         [Route("Search/InstantResult")]
         [Route("Search/Instant/Result/{query}")]
         public async Task<ActionResult> InstantResult(string query)
