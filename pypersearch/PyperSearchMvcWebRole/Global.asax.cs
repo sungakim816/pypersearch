@@ -29,13 +29,10 @@ namespace PyperSearchMvcWebRole
         private void Initialize()
         {
             // connect to a storage account
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("StorageConnectionString"));
-            // create a blob client
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-            // access blob storage container
-            CloudBlobContainer pyperSearchContainer = blobClient.GetContainerReference("pypersearch");
-            // create if does not exists
-            pyperSearchContainer.CreateIfNotExistsAsync();
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(RoleEnvironment.GetConfigurationSettingValue("StorageConnectionString"));           
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient(); // create a blob client
+            CloudBlobContainer pyperSearchContainer = blobClient.GetContainerReference("pypersearch"); // access blob storage container           
+            pyperSearchContainer.CreateIfNotExistsAsync(); // create if does not exists
             // access the actual file needed to be access (pagecount.csv, stopwords.csv)
             CloudBlockBlob pageCountsBlockBlob = pyperSearchContainer.GetBlockBlobReference("pagecounts.csv");
             CloudBlockBlob stopWordsBlockBlob = pyperSearchContainer.GetBlockBlobReference("stopwords.csv");
@@ -44,12 +41,12 @@ namespace PyperSearchMvcWebRole
             StreamReader streamReader = new StreamReader(pageCountsBlockBlob.OpenRead());  // create a stream reader for pageCountBlockBlob
             string line;
             while ((line = streamReader.ReadLine()) != null)  // save lines to trie
-            {
-                string[] line_arr = line.Split(':');
-                string title = line_arr.FirstOrDefault();
+            {       
                 try
                 {
-                    trie.Add(title.ToLower(), title);
+                    string[] line_arr = line.Split(':');
+                    string pageTitle = line_arr.FirstOrDefault();
+                    trie.Add(pageTitle.ToLower(), pageTitle);
                 }
                 catch (Exception ex)
                 {
