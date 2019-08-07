@@ -25,12 +25,12 @@
                 return;
             }
             var xmlhttp = new XMLHttpRequest();
-            xmlhttp.open("GET", '@Url.Action("UpdateQuerySuggestions", "Search")' + '?query=' + query);
+            xmlhttp.open("GET", '@Url.Action("UpdateQuerySuggestions", "Search")' + '?query=' + encodeURIComponent(query));
             xmlhttp.send();
         }
 
-        function showQuerySuggestions(str) {
-            if (str.length == 0) {
+        function showQuerySuggestions(query) {
+            if (query.length == 0) {
                 $("#query-suggestions").empty();
                 return;
             }
@@ -41,7 +41,7 @@
                     $("#query-suggestions").html(this.responseText);
                 }
             }
-            var actionUrl = '@Url.Action("Autocomplete", "Search")' + '?query=' + str;
+            var actionUrl = '@Url.Action("Autocomplete", "Search")' + '?query=' + encodeURIComponent(query);
             xmlhttp.open('GET', actionUrl, true);
             xmlhttp.send();
         }

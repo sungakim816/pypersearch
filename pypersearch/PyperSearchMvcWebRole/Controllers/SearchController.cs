@@ -118,6 +118,7 @@ namespace PyperSearchMvcWebRole.Controllers
             {
                 return View(Enumerable.Empty<WebsitePage>().ToPagedList(1, 1));
             }
+            query = HttpUtility.UrlDecode(query);
             int pageSize = 15; // items per pages
             pageNumber = pageNumber.HasValue ? pageNumber : 1; // page number
             ViewBag.Query = query; // save raw query 
@@ -193,6 +194,7 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/Autocomplete/{query}")]
         public ActionResult Autocomplete(string query)
         {
+            query = HttpUtility.UrlDecode(query);
             trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie"); // retrieve trie from cache
             if (string.IsNullOrEmpty(query) || string.IsNullOrWhiteSpace(query))
             {
@@ -237,6 +239,7 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/Update/Suggestions/{query}")]
         public ActionResult UpdateQuerySuggestions(string query)
         {
+            query = HttpUtility.UrlDecode(query);
             trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie");
             if (!trie.Retrieve(query.ToLower()).Any())
             {
@@ -261,6 +264,7 @@ namespace PyperSearchMvcWebRole.Controllers
             {
                 return View(Enumerable.Empty<WebsitePage>());
             }
+            query = HttpUtility.UrlDecode(query);
             List<string> keywords = GetValidKeywords(query); // get valid keywords
             if (!keywords.Any()) // check if empty
             {

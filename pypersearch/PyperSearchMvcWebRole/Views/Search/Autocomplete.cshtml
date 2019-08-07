@@ -1,5 +1,7 @@
 ﻿@model IEnumerable<string>
-
+@{ 
+    Layout = null;
+}
 <div class="list-group p-2 text-dark">
     <ul>
         @if (Model != null && Model.Any())

@@ -5,7 +5,8 @@
     ViewBag.Title = "Search";
 }
 @Html.Partial("_NavSearchBar")
-<div class="row container-fluid bg-transparent p-lg-4" id="search-result">
+<br />
+<div class="row container-fluid bg-transparent" id="search-result">
     @if ((Model != null && Model.Any()))
     {
         <div class="list-group list-group-flush w-50 text-break col-lg-6 mr-4 ml-4">
@@ -89,7 +90,7 @@
                 return;
             }
             var xmlhttp = new XMLHttpRequest();
-            xmlhttp.open("GET", '@Url.Action("UpdateQuerySuggestions", "Search")' + '?query=' + query);
+            xmlhttp.open("GET", '@Url.Action("UpdateQuerySuggestions", "Search")' + '?query=' + encodeURIComponent(query));
             xmlhttp.send();
         }
 
@@ -105,7 +106,7 @@
                     $("#query-suggestions").html(this.responseText);
                 }
             };
-            var actionUrl = '@Url.Action("Autocomplete", "Search")' + '?query=' + query;
+            var actionUrl = '@Url.Action("Autocomplete", "Search")' + '?query=' + encodeURIComponent(query);
             xmlhttp.open('GET', actionUrl, true);
             xmlhttp.send();
         }
@@ -136,7 +137,7 @@
                     $("#search-result").html(this.responseText);
                 }
             };
-            var actionUrl = "@Url.Action("InstantResult", "Search")" + "?query=" + query;
+            var actionUrl = "@Url.Action("InstantResult", "Search")" + "?query=" + encodeURIComponent(query);
             xmlhttp.open("GET", actionUrl, true);
             xmlhttp.send();
         }
