@@ -115,14 +115,13 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/{query}/{pageNumber:regex(^[1-9]{0, 4}$)}")]
         public async Task<ActionResult> Index(string query, int? pageNumber)
         {
-            if (string.IsNullOrEmpty(query))
+            if (string.IsNullOrEmpty(query) || string.IsNullOrWhiteSpace(query))
             {
-                return View(Enumerable.Empty<WebsitePage>().ToPagedList(1, 1));
+                return View(Enumerable.Empty<WebsitePage>());
             }
+            query = HttpUtility.UrlDecode(query.Trim()); // decode query to be readable
             int pageSize = 15; // items per pages
             pageNumber = pageNumber.HasValue ? pageNumber : 1; // page number
-           
-            query = HttpUtility.UrlDecode(query); // decode query to be readable
             ViewBag.Query = query;
             List<string> keywords = GetValidKeywords(query); // get valid keywords
             if (!keywords.Any()) // check if empty
@@ -208,11 +207,11 @@ namespace PyperSearchMvcWebRole.Controllers
         public ActionResult Autocomplete(string query)
         {
             query = HttpUtility.UrlDecode(query);
-            trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie"); // retrieve trie from cache
             if (string.IsNullOrEmpty(query) || string.IsNullOrWhiteSpace(query))
             {
                 return View(Enumerable.Empty<string>());
             }
+            trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie"); // retrieve trie from cache
             ViewBag.Query = query;
             var suggestions = trie.Retrieve(query.ToLower()).Take(10);
             return View(suggestions);
@@ -252,7 +251,11 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/Update/Suggestions/{query}")]
         public ActionResult UpdateQuerySuggestions(string query)
         {
-            query = HttpUtility.UrlDecode(query);
+            if(string.IsNullOrEmpty(query) || string.IsNullOrWhiteSpace(query))
+            {
+                return new EmptyResult();
+            }
+            query = HttpUtility.UrlDecode(query.Trim());
             trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie");
             if (!trie.Retrieve(query.ToLower()).Any())
             {
@@ -273,11 +276,11 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/Instant/Result/{query}")]
         public async Task<ActionResult> InstantResult(string query)
         {
-            if (string.IsNullOrEmpty(query))
+            if (string.IsNullOrEmpty(query) || string.IsNullOrWhiteSpace(query))
             {
                 return View(Enumerable.Empty<WebsitePage>());
             }
-            query = HttpUtility.UrlDecode(query);
+            query = HttpUtility.UrlDecode(query.Trim());
             List<string> keywords = GetValidKeywords(query); // get valid keywords
             if (!keywords.Any()) // check if empty
             {
