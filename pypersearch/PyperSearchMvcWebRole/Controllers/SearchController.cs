@@ -206,13 +206,12 @@ namespace PyperSearchMvcWebRole.Controllers
         [Route("Search/Autocomplete/{query}")]
         public ActionResult Autocomplete(string query)
         {
-            query = HttpUtility.UrlDecode(query);
+            query = HttpUtility.UrlDecode(query.Trim());
             if (string.IsNullOrEmpty(query) || string.IsNullOrWhiteSpace(query))
             {
                 return View(Enumerable.Empty<string>());
             }
             trie = (PatriciaTrie<string>)HttpRuntime.Cache.Get("trie"); // retrieve trie from cache
-            ViewBag.Query = query;
             var suggestions = trie.Retrieve(query.ToLower()).Take(10);
             return View(suggestions);
         }
