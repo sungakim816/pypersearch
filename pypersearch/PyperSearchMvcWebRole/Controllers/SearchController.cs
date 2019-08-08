@@ -294,7 +294,6 @@ namespace PyperSearchMvcWebRole.Controllers
                 return View(finalResult);
             }
             finalResult = new List<WebsitePage>();
-
             // get all indexed domain names (just select partition key for better performance)
             var domainNames = domainTable.ExecuteQuery(new TableQuery<DynamicTableEntity>().Select(new List<string> { "PartitionKey" })).Select(x => x.PartitionKey);
             List<WebsitePage> partialResults = new List<WebsitePage>();
@@ -343,7 +342,7 @@ namespace PyperSearchMvcWebRole.Controllers
             }
             finalResult = finalResult.OrderByDescending(x => x.Clicks).ToList();
             HttpRuntime.Cache.Insert(query, finalResult, null,
-                DateTime.Now.AddDays(2), Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null); // save result to cache
+                DateTime.Now.AddHours(1), Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null); // save result to cache
             return View(finalResult.Take(20)); // limit result to 20 only
         }
     }
