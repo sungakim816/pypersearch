@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System;
+using System.Web.Caching;
 
 namespace PyperSearchMvcWebRole.Controllers
 {
@@ -118,10 +119,11 @@ namespace PyperSearchMvcWebRole.Controllers
             {
                 return View(Enumerable.Empty<WebsitePage>().ToPagedList(1, 1));
             }
-            query = HttpUtility.UrlDecode(query);
             int pageSize = 15; // items per pages
             pageNumber = pageNumber.HasValue ? pageNumber : 1; // page number
-            ViewBag.Query = query; // save raw query 
+           
+            query = HttpUtility.UrlDecode(query); // decode query to be readable
+            ViewBag.Query = query;
             List<string> keywords = GetValidKeywords(query); // get valid keywords
             if (!keywords.Any()) // check if empty
             {
@@ -132,8 +134,17 @@ namespace PyperSearchMvcWebRole.Controllers
                 ViewBag.NbaPlayer = GetNbaPlayerStats(keywords.First(), keywords[1]);
             }
             ViewBag.Keywords = keywords; // store query for body snippet highligthing 
+            var finalResult = (List<WebsitePage>)HttpRuntime.Cache.Get(query); // get result from cache
+            if(finalResult != null) // if not empty
+            {
+                return View(finalResult.ToPagedList((int)pageNumber, pageSize));
+            }
+            finalResult = new List<WebsitePage>();
+            // else process the request and save to cache   
             // get all indexed domain names (just select partition key for better performance)
-            var domainNames = domainTable.ExecuteQuery(new TableQuery<DynamicTableEntity>().Select(new List<string> { "PartitionKey" })).Select(x => x.PartitionKey);
+            var domainNames = domainTable.ExecuteQuery(new TableQuery<DynamicTableEntity>()
+                .Select(new List<string> { "PartitionKey" }))
+                .Select(x => x.PartitionKey);
             List<WebsitePage> partialResults = new List<WebsitePage>();
             TableContinuationToken continuationToken = null;
             TableQuery<WebsitePage> tableQuery = new TableQuery<WebsitePage>().Select(new string[] { "Rowkey", "Domain" });
@@ -156,7 +167,7 @@ namespace PyperSearchMvcWebRole.Controllers
                     }
                     catch (Exception)
                     {
-                        Trace.TraceInformation("Table '" + tableName + "' does not exist");
+                        // Table Does not exists
                         break;
                     }
                 }
@@ -165,7 +176,6 @@ namespace PyperSearchMvcWebRole.Controllers
                 .GroupBy(r => r.RowKey) // group by row key
                 .OrderByDescending(r => r.Count()) // order based on frequency
                 .Select(r => r.FirstOrDefault()).Take(100); // get distinct values and take 'n' elements
-            List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
             foreach (var page in partial)
             {
                 // query to retrieve single website page object from database with specific columns to improve performance
@@ -181,7 +191,10 @@ namespace PyperSearchMvcWebRole.Controllers
                     finalResult.Add(element);
                 }
             }
-            return View(finalResult.OrderByDescending(x => x.Clicks).ToPagedList((int)pageNumber, pageSize));
+            finalResult = finalResult.OrderByDescending(x => x.Clicks).ToList(); // order by number of clicks
+            HttpRuntime.Cache.Insert(query, finalResult, null,
+                DateTime.Now.AddHours(1), Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null); // save result to cache
+            return View(finalResult.ToPagedList((int)pageNumber, pageSize));
         }
 
         /// <summary>
@@ -275,6 +288,13 @@ namespace PyperSearchMvcWebRole.Controllers
                 ViewBag.NbaPlayer = GetNbaPlayerStats(keywords.First(), keywords[1]);
             }
             ViewBag.Keywords = keywords; // store query for body snippet highligthing 
+            var finalResult = (List<WebsitePage>)HttpRuntime.Cache.Get(query.ToLower()); // get result from cache
+            if (finalResult != null) // if not empty
+            {
+                return View(finalResult);
+            }
+            finalResult = new List<WebsitePage>();
+
             // get all indexed domain names (just select partition key for better performance)
             var domainNames = domainTable.ExecuteQuery(new TableQuery<DynamicTableEntity>().Select(new List<string> { "PartitionKey" })).Select(x => x.PartitionKey);
             List<WebsitePage> partialResults = new List<WebsitePage>();
@@ -306,7 +326,6 @@ namespace PyperSearchMvcWebRole.Controllers
                 .GroupBy(r => r.RowKey) // group by row key
                 .OrderByDescending(r => r.Count()) // order based on frequency
                 .Select(r => r.FirstOrDefault()).Take(50); // get distinct values and take 'n' elements
-            List<WebsitePage> finalResult = new List<WebsitePage>(); // final result
             foreach (var page in partial)
             {
                 // query to return single website page object using partitionkey and rowkey
@@ -322,7 +341,10 @@ namespace PyperSearchMvcWebRole.Controllers
                     finalResult.Add(element); // add to final list
                 }
             }
-            return View(finalResult.OrderByDescending(x => x.Clicks).Take(15)); // limit result to 15 only
+            finalResult = finalResult.OrderByDescending(x => x.Clicks).ToList();
+            HttpRuntime.Cache.Insert(query, finalResult, null,
+                DateTime.Now.AddDays(2), Cache.NoSlidingExpiration, CacheItemPriority.NotRemovable, null); // save result to cache
+            return View(finalResult.Take(20)); // limit result to 20 only
         }
     }
 }
