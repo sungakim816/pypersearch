@@ -26,6 +26,9 @@ namespace PyperSearchMvcWebRole
             Initialize();
         }
 
+        /// <summary>
+        /// Initialize trie, stopwords etc. and save to server runtime cache
+        /// </summary>
         private void Initialize()
         {
             // connect to a storage account

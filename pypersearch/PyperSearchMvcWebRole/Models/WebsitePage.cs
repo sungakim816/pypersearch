@@ -10,6 +10,9 @@ using System.Web;
 
 namespace PyperSearchMvcWebRole.Models
 {
+    /// <summary>
+    /// Website page class for Crawled Websites (PA 3)
+    /// </summary>
     public class WebsitePage : TableEntity
     {
         private readonly HashAlgorithm algorithm = SHA256.Create();

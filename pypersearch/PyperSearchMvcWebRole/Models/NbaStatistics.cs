@@ -5,6 +5,9 @@ using System.Web;
 
 namespace PyperSearchMvcWebRole.Models
 {
+    /// <summary>
+    /// Class for Nba Player Personal Info
+    /// </summary>
     public class PersonalInfo
     {
         public string Id { get; set; }
@@ -15,6 +18,9 @@ namespace PyperSearchMvcWebRole.Models
         public string LastName { get; set; }
     }
 
+    /// <summary>
+    /// Class for NBA player statistics
+    /// </summary>
     public class Statistics
     {
         public string FgMade { get; set; }
@@ -37,6 +43,9 @@ namespace PyperSearchMvcWebRole.Models
         public string Blocks { get; set; }
     }
 
+    /// <summary>
+    /// Over all implementation for NBA Player Statistics and Records
+    /// </summary>
     public class NbaStatistics
     {
         public PersonalInfo PersonalInfo { get; set; }
